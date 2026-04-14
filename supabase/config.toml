@@ -1,5 +1,5 @@
 # Supabase local dev config. Project-id is used for local CLI only.
-project_id = "sathi"
+project_id = "saathi"
 
 [api]
 enabled = true

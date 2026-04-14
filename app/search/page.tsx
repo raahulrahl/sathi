@@ -1,3 +1,4 @@
+import { auth } from '@clerk/nextjs/server';
 import { Suspense } from 'react';
 import type { Metadata } from 'next';
 import { Calendar, Compass } from 'lucide-react';
@@ -65,12 +66,12 @@ async function Results({ from, to, date }: { from: string; to: string; date: str
   // Authed viewer's languages used for in-card bolding.
   let viewerLanguages: string[] = [];
   let viewerPrimary: string | null = null;
-  const { data: userResp } = await supabase.auth.getUser();
-  if (userResp.user) {
+  const { userId } = await auth();
+  if (userId) {
     const { data: profile } = await supabase
       .from('profiles')
       .select('languages, primary_language')
-      .eq('id', userResp.user.id)
+      .eq('id', userId)
       .maybeSingle();
     if (profile) {
       viewerLanguages = profile.languages ?? [];

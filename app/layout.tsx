@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Inter, Fraunces } from 'next/font/google';
+import { ClerkProvider } from '@clerk/nextjs';
 import { SiteHeader } from '@/components/site-header';
 import { SiteFooter } from '@/components/site-footer';
 import './globals.css';
@@ -9,26 +10,36 @@ const serif = Fraunces({ subsets: ['latin'], variable: '--font-serif', display: 
 
 export const metadata: Metadata = {
   title: {
-    default: 'Sathi — a companion on the flight home',
-    template: '%s · Sathi',
+    default: 'Saathi — a companion on the flight home',
+    template: '%s · Saathi',
   },
   description:
-    'Sathi pairs elderly travellers with solo travellers already flying the same route, so no parent has to navigate an unfamiliar airport alone.',
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'),
+    'Saathi pairs elderly travellers with solo travellers already flying the same route, so no parent has to navigate an unfamiliar airport alone.',
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? 'https://saathi.travel'),
   openGraph: {
     type: 'website',
-    siteName: 'Sathi',
+    siteName: 'Saathi',
   },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${sans.variable} ${serif.variable}`}>
-      <body className="flex min-h-screen flex-col font-sans">
-        <SiteHeader />
-        <main className="flex-1">{children}</main>
-        <SiteFooter />
-      </body>
-    </html>
+    <ClerkProvider
+      appearance={{
+        variables: {
+          colorPrimary: 'hsl(21 90% 48%)', // saffron-600 — matches our primary
+          borderRadius: '0.75rem',
+          fontFamily: 'var(--font-sans), system-ui, sans-serif',
+        },
+      }}
+    >
+      <html lang="en" className={`${sans.variable} ${serif.variable}`}>
+        <body className="flex min-h-screen flex-col font-sans">
+          <SiteHeader />
+          <main className="flex-1">{children}</main>
+          <SiteFooter />
+        </body>
+      </html>
+    </ClerkProvider>
   );
 }

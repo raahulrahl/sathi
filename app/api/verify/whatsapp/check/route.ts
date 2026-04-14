@@ -1,3 +1,4 @@
+import { auth } from '@clerk/nextjs/server';
 import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
@@ -10,8 +11,8 @@ const Body = z.object({
 
 export async function POST(request: NextRequest) {
   const supabase = await createSupabaseServerClient();
-  const { data: userResp } = await supabase.auth.getUser();
-  if (!userResp.user) {
+  const { userId } = await auth();
+  if (!userId) {
     return NextResponse.json({ ok: false, error: 'Not signed in' }, { status: 401 });
   }
 
@@ -32,7 +33,7 @@ export async function POST(request: NextRequest) {
   // OAuth identities, but for WhatsApp we do it from the API route.
   const { error } = await supabase.from('verifications').upsert(
     {
-      user_id: userResp.user.id,
+      user_id: userId,
       channel: 'whatsapp',
       handle: parsed.data.phone,
       verified_at: new Date().toISOString(),

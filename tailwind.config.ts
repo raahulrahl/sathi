@@ -47,7 +47,7 @@ const config: Config = {
           DEFAULT: 'hsl(var(--card))',
           foreground: 'hsl(var(--card-foreground))',
         },
-        // Sathi warm palette
+        // Saathi warm palette
         saffron: {
           50: '#fff7ec',
           100: '#ffebd0',

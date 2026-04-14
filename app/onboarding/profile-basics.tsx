@@ -55,7 +55,7 @@ export function ProfileBasics({ initial }: ProfileBasicsProps) {
     <form onSubmit={onSubmit} className="grid gap-5">
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-1.5">
-          <Label htmlFor="role">I'm using Sathi as a…</Label>
+          <Label htmlFor="role">I'm using Saathi as a…</Label>
           <select
             id="role"
             value={state.role}

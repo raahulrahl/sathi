@@ -279,7 +279,8 @@ export function PostWizard({ kind, profileLanguages, defaults }: PostWizardProps
               placeholder="15"
             />
             <p className="text-xs text-muted-foreground">
-              Sathi never touches money. This is just the suggested gratitude to settle between you.
+              Saathi never touches money. This is just the suggested gratitude to settle between
+              you.
             </p>
           </div>
         ) : null}

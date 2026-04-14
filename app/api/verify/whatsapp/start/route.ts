@@ -1,14 +1,13 @@
+import { auth } from '@clerk/nextjs/server';
 import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
-import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { isPlausibleE164, startWhatsAppVerification } from '@/lib/verify';
 
 const Body = z.object({ phone: z.string().trim() });
 
 export async function POST(request: NextRequest) {
-  const supabase = await createSupabaseServerClient();
-  const { data: userResp } = await supabase.auth.getUser();
-  if (!userResp.user) {
+  const { userId } = await auth();
+  if (!userId) {
     return NextResponse.json({ ok: false, error: 'Not signed in' }, { status: 401 });
   }
 

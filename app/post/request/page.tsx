@@ -1,3 +1,4 @@
+import { auth } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 import type { Metadata } from 'next';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -14,16 +15,16 @@ export default async function PostRequestPage({ searchParams }: PostRequestPageP
   const { from = '', to = '', date = '' } = await searchParams;
 
   const supabase = await createSupabaseServerClient();
-  const { data: userResp } = await supabase.auth.getUser();
-  if (!userResp.user) redirect('/auth/sign-in?next=/post/request');
+  const { userId } = await auth();
+  if (!userId) redirect('/auth/sign-in?next=/post/request');
 
   const [{ data: profile }, { data: verifs }] = await Promise.all([
     supabase
       .from('profiles')
       .select('role, languages, primary_language')
-      .eq('id', userResp.user.id)
+      .eq('id', userId)
       .maybeSingle(),
-    supabase.from('verifications').select('channel, verified_at').eq('user_id', userResp.user.id),
+    supabase.from('verifications').select('channel, verified_at').eq('user_id', userId),
   ]);
   const verifiedCount = (verifs ?? []).filter((v) => v.verified_at).length;
 

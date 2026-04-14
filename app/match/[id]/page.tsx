@@ -1,3 +1,4 @@
+import { auth } from '@clerk/nextjs/server';
 import { redirect, notFound } from 'next/navigation';
 import Link from 'next/link';
 import type { Metadata } from 'next';
@@ -18,8 +19,8 @@ export const metadata: Metadata = { title: 'Match' };
 export default async function MatchPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const supabase = await createSupabaseServerClient();
-  const { data: userResp } = await supabase.auth.getUser();
-  if (!userResp.user) redirect(`/auth/sign-in?next=/match/${id}`);
+  const { userId } = await auth();
+  if (!userId) redirect(`/auth/sign-in?next=/match/${id}`);
 
   const { data: match } = await supabase
     .from('matches')
@@ -69,7 +70,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
     };
   };
 
-  const youArePoster = userResp.user.id === m.poster.id;
+  const youArePoster = userId === m.poster.id;
   const other = youArePoster ? m.requester : m.poster;
 
   return (
@@ -79,7 +80,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
         <Badge variant="success">{m.status}</Badge>
       </div>
       <h1 className="mt-1 font-serif text-3xl">
-        You're matched with {other.full_name ?? other.display_name ?? 'your Sathi'}
+        You're matched with {other.full_name ?? other.display_name ?? 'your Saathi'}
       </h1>
       <p className="mt-1 text-sm text-muted-foreground">
         Matched on {format(parseISO(m.trip.travel_date), 'EEE, d LLL yyyy')} ·{' '}

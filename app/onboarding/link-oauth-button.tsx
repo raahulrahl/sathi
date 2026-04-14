@@ -1,42 +1,56 @@
 'use client';
 
+import { useState } from 'react';
+import { useUser } from '@clerk/nextjs';
 import { Button } from '@/components/ui/button';
-import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 
-type LinkableProvider = 'linkedin' | 'twitter';
+type LinkableProvider = 'linkedin' | 'twitter' | 'google';
 
-const SUPABASE_PROVIDER: Record<LinkableProvider, 'linkedin_oidc' | 'twitter'> = {
-  linkedin: 'linkedin_oidc',
-  twitter: 'twitter',
+const CLERK_STRATEGY: Record<LinkableProvider, 'oauth_linkedin_oidc' | 'oauth_x' | 'oauth_google'> =
+  {
+    linkedin: 'oauth_linkedin_oidc',
+    twitter: 'oauth_x',
+    google: 'oauth_google',
+  };
+
+const LABEL: Record<LinkableProvider, string> = {
+  linkedin: 'LinkedIn',
+  twitter: 'X',
+  google: 'Google',
 };
 
 /**
- * Adds an additional OAuth identity to the current user. Supabase writes it to
- * auth.identities; the trigger in 0003 mirrors it into `verifications`.
+ * Adds an external account to the current Clerk user. Clerk opens its own
+ * OAuth window; on return the Clerk webhook fires `user.updated`, which
+ * mirrors the new identity into our `verifications` table (see
+ * /api/clerk-webhook).
  */
 export function LinkOAuthButton({ provider }: { provider: LinkableProvider }) {
-  const supabase = createSupabaseBrowserClient();
+  const { user, isLoaded } = useUser();
+  const [pending, setPending] = useState(false);
+
   async function onClick() {
-    const next = '/onboarding';
-    const redirectTo =
-      typeof window !== 'undefined'
-        ? `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`
-        : undefined;
-    // linkIdentity keeps the current session and adds the new identity.
-    const linkOpts = { provider: SUPABASE_PROVIDER[provider] } as const;
-    const { error } = await supabase.auth.linkIdentity(linkOpts);
-    if (error) {
-      // Fall back to a regular OAuth sign-in — Supabase will link the identity
-      // on providers that allow merging, or show an error.
-      await supabase.auth.signInWithOAuth({
-        provider: SUPABASE_PROVIDER[provider],
-        ...(redirectTo ? { options: { redirectTo } } : {}),
+    if (!isLoaded || !user) return;
+    setPending(true);
+    try {
+      await user.createExternalAccount({
+        strategy: CLERK_STRATEGY[provider],
+        redirectUrl: window.location.href,
       });
+    } finally {
+      setPending(false);
     }
   }
+
   return (
-    <Button variant="outline" size="sm" onClick={onClick} className="w-full">
-      Link {provider === 'linkedin' ? 'LinkedIn' : 'X'}
+    <Button
+      variant="outline"
+      size="sm"
+      onClick={onClick}
+      disabled={!isLoaded || pending}
+      className="w-full"
+    >
+      {pending ? 'Redirecting…' : `Link ${LABEL[provider]}`}
     </Button>
   );
 }

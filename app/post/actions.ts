@@ -1,5 +1,6 @@
 'use server';
 
+import { auth } from '@clerk/nextjs/server';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { z } from 'zod';
@@ -48,8 +49,8 @@ export async function createTripAction(input: TripInput) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? 'Invalid trip.' } as const;
   }
   const supabase = await createSupabaseServerClient();
-  const { data: userResp } = await supabase.auth.getUser();
-  if (!userResp.user) {
+  const { userId } = await auth();
+  if (!userId) {
     return { ok: false, error: 'Please sign in.' } as const;
   }
 
@@ -57,7 +58,7 @@ export async function createTripAction(input: TripInput) {
   const { data: verifs } = await supabase
     .from('verifications')
     .select('channel, verified_at')
-    .eq('user_id', userResp.user.id);
+    .eq('user_id', userId);
   const verifiedCount = (verifs ?? []).filter((v) => v.verified_at).length;
   if (verifiedCount < 2) {
     return {
@@ -73,7 +74,7 @@ export async function createTripAction(input: TripInput) {
   }
 
   const insertRow = {
-    user_id: userResp.user.id,
+    user_id: userId,
     kind: p.kind,
     route: p.route,
     travel_date: p.travel_date,

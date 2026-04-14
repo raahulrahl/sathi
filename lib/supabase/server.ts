@@ -1,59 +1,51 @@
-import { createServerClient, type CookieOptions } from '@supabase/ssr';
-import { cookies } from 'next/headers';
+import { createClient } from '@supabase/supabase-js';
+import { auth } from '@clerk/nextjs/server';
 
-interface CookieChange {
-  name: string;
-  value: string;
-  options: CookieOptions;
-}
-
-// Note: we intentionally do NOT pass a typed `Database` generic to
-// `createServerClient`. The hand-authored `types/db.ts` stub exists to make
-// application-level shapes explicit, but the Supabase SDK's generated-type
-// format changes between minor versions and forces brittle `__InternalSupabase`
-// shapes. Once `pnpm db:types` is wired up against a real project, flip
-// these back to `createServerClient<Database>(...)`.
-
-/** Server-side Supabase client bound to the current request's cookies. */
+/**
+ * Server-side Supabase client that trusts Clerk as the auth source.
+ *
+ * How it works:
+ *   1. Clerk signs a JWT using Supabase's JWT secret via a "supabase" JWT
+ *      template (created in the Clerk dashboard).
+ *   2. We fetch that JWT here via `auth().getToken({ template: 'supabase' })`.
+ *   3. We pass it as a Bearer token on every Supabase request.
+ *   4. Supabase decodes the claim `sub` as the Clerk user id.
+ *   5. Our RLS policies call `auth.clerk_user_id()` (from 0005_clerk.sql),
+ *      which reads that same `sub` as text — matching `profiles.id`.
+ *
+ * For anonymous viewers (no Clerk session) we fall back to the anon key,
+ * which is what the public search / trip / profile pages need.
+ */
 export async function createSupabaseServerClient() {
-  const cookieStore = await cookies();
-  return createServerClient(
+  const { getToken } = await auth();
+  const clerkToken = await getToken({ template: 'supabase' }).catch(() => null);
+
+  return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL ?? '',
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '',
     {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll();
-        },
-        setAll(cookiesToSet: CookieChange[]) {
-          try {
-            cookiesToSet.forEach(({ name, value, options }: CookieChange) => {
-              cookieStore.set(name, value, options);
-            });
-          } catch {
-            // Called from a Server Component — ignore; middleware refreshes.
-          }
-        },
+      global: {
+        headers: clerkToken ? { Authorization: `Bearer ${clerkToken}` } : {},
+      },
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
       },
     },
   );
 }
 
-/** Elevated-privilege server client. NEVER import from code that runs in a browser. */
+/**
+ * Service-role client. Bypasses RLS entirely — only use from server-side
+ * code that needs to create users (webhooks) or run the cron. Never call
+ * from a code path that can be reached by a browser.
+ */
 export function createSupabaseServiceClient() {
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!serviceKey) {
     throw new Error('SUPABASE_SERVICE_ROLE_KEY is not set');
   }
-  return createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL ?? '', serviceKey, {
-    cookies: {
-      getAll() {
-        return [];
-      },
-      setAll() {
-        // no-op — service role never writes cookies
-      },
-    },
+  return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL ?? '', serviceKey, {
     auth: {
       persistSession: false,
       autoRefreshToken: false,

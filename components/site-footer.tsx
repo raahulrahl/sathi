@@ -5,10 +5,10 @@ export function SiteFooter() {
     <footer className="mt-auto border-t bg-muted/40">
       <div className="container grid gap-8 py-10 text-sm md:grid-cols-4">
         <div>
-          <div className="font-serif text-xl font-semibold">Sathi</div>
+          <div className="font-serif text-xl font-semibold">Saathi</div>
           <p className="mt-2 max-w-xs text-muted-foreground">
             A matchmaking platform for elderly travellers and the solo travellers already flying
-            their route. Sathi makes the introduction — nothing more.
+            their route. Saathi makes the introduction — nothing more.
           </p>
         </div>
         <nav className="space-y-2">
@@ -36,12 +36,7 @@ export function SiteFooter() {
           <ul className="space-y-1.5 text-muted-foreground">
             <li>
               <Link href="/about" className="hover:text-foreground">
-                About
-              </Link>
-            </li>
-            <li>
-              <Link href="/trust" className="hover:text-foreground">
-                Trust & safety
+                About &amp; trust
               </Link>
             </li>
             <li>
@@ -70,10 +65,10 @@ export function SiteFooter() {
       <div className="border-t">
         <div className="container flex flex-wrap items-center justify-between gap-2 py-4 text-xs text-muted-foreground">
           <p>
-            Sathi is an introduction service. You are responsible for your own arrangement, payment,
-            and travel.
+            Saathi is an introduction service. You are responsible for your own arrangement,
+            payment, and travel.
           </p>
-          <p>© {new Date().getFullYear()} Sathi</p>
+          <p>© {new Date().getFullYear()} Saathi</p>
         </div>
       </div>
     </footer>

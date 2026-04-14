@@ -1,5 +1,6 @@
 'use server';
 
+import { auth } from '@clerk/nextjs/server';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
@@ -24,8 +25,8 @@ export async function updateOwnProfileAction(input: ProfileBasicsInput) {
     return { ok: false, error: 'Invalid profile input.' } as const;
   }
   const supabase = await createSupabaseServerClient();
-  const { data: userResp } = await supabase.auth.getUser();
-  if (!userResp.user) return { ok: false, error: 'Not signed in.' } as const;
+  const { userId } = await auth();
+  if (!userId) return { ok: false, error: 'Not signed in.' } as const;
 
   const p = parsed.data;
   if (!p.languages.includes(p.primary_language)) {
@@ -51,10 +52,10 @@ export async function updateOwnProfileAction(input: ProfileBasicsInput) {
       gender: p.gender || null,
       photo_url: p.photo_url || null,
     })
-    .eq('id', userResp.user.id);
+    .eq('id', userId);
 
   if (error) return { ok: false, error: error.message } as const;
   revalidatePath('/onboarding');
-  revalidatePath(`/profile/${userResp.user.id}`);
+  revalidatePath(`/profile/${userId}`);
   return { ok: true } as const;
 }

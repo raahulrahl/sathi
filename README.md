@@ -1,10 +1,10 @@
-# Sathi
+# Saathi
 
 > **साथी** — companion. A matchmaking platform that pairs elderly travellers
 > from immigrant families with solo travellers on the same flight route, so no
 > parent has to navigate an unfamiliar airport alone.
 
-This repository is the initial build of Sathi. See the full product spec in
+This repository is the initial build of Saathi. See the full product spec in
 `docs/spec.md` (or wherever your org stores it) for the full rationale. The
 high-level shape:
 
@@ -13,7 +13,7 @@ high-level shape:
   proximity, then route exactness and verification depth.
 - **Verification is social-graph based.** Users must link ≥2 of LinkedIn, X,
   email, WhatsApp before they can post or send a request. No passport uploads.
-- **Sathi never touches money.** The thank-you (€10–20) is settled directly
+- **Saathi never touches money.** The thank-you (€10–20) is settled directly
   between family and companion.
 
 ## Stack

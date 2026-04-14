@@ -1,5 +1,6 @@
 'use server';
 
+import { auth } from '@clerk/nextjs/server';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
@@ -16,13 +17,13 @@ export async function sendMatchRequestAction(input: z.infer<typeof Input>) {
     return { ok: false, error: 'Please write at least a couple of sentences.' } as const;
   }
   const supabase = await createSupabaseServerClient();
-  const { data: userResp } = await supabase.auth.getUser();
-  if (!userResp.user) return { ok: false, error: 'Please sign in.' } as const;
+  const { userId } = await auth();
+  if (!userId) return { ok: false, error: 'Please sign in.' } as const;
 
   const { data: verifs } = await supabase
     .from('verifications')
     .select('channel, verified_at')
-    .eq('user_id', userResp.user.id);
+    .eq('user_id', userId);
   if ((verifs ?? []).filter((v) => v.verified_at).length < 2) {
     return { ok: false, error: 'Please verify at least two channels first.' } as const;
   }
@@ -34,7 +35,7 @@ export async function sendMatchRequestAction(input: z.infer<typeof Input>) {
 
   const { error } = await supabase.from('match_requests').insert({
     trip_id: parsed.data.trip_id,
-    requester_id: userResp.user.id,
+    requester_id: userId,
     intro_message: parsed.data.intro_message,
   });
 

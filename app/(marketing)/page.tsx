@@ -17,7 +17,7 @@ export default function LandingPage() {
               No parent should have to navigate an unfamiliar airport alone.
             </h1>
             <p className="max-w-xl text-balance text-lg text-muted-foreground">
-              Sathi pairs elderly travellers with solo travellers already on the same flight. A
+              Saathi pairs elderly travellers with solo travellers already on the same flight. A
               small thank-you, a shared language, a familiar face at the gate.
             </p>
           </div>
@@ -53,14 +53,14 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Why Sathi */}
+      {/* Why Saathi */}
       <section className="bg-muted/40 py-16">
         <div className="container grid gap-10 md:grid-cols-[1fr_1.2fr] md:items-center">
           <div>
             <h2 className="font-serif text-3xl">Built around language, not paperwork.</h2>
             <p className="mt-4 text-muted-foreground">
               Passport uploads don't make anyone safer. A Bengali-speaking student at Schiphol does.
-              Sathi ranks companions by the language they share with your parent, not by how shiny
+              Saathi ranks companions by the language they share with your parent, not by how shiny
               their profile looks.
             </p>
             <ul className="mt-6 space-y-3 text-sm">
@@ -97,8 +97,8 @@ export default function LandingPage() {
               who can help with the transfer at Doha.&rdquo;
             </p>
             <p className="mt-4 text-sm text-muted-foreground">
-              Sathi surfaces the handful of Bengali-speaking students on that exact route this week.
-              You pick, chat, and meet at the gate.
+              Saathi surfaces the handful of Bengali-speaking students on that exact route this
+              week. You pick, chat, and meet at the gate.
             </p>
           </div>
         </div>
@@ -108,7 +108,7 @@ export default function LandingPage() {
       <section className="container py-16 text-center">
         <div className="mx-auto max-w-2xl space-y-4">
           <Plane className="mx-auto size-10 text-saffron-600" aria-hidden />
-          <h2 className="font-serif text-3xl">Ready to find a Sathi?</h2>
+          <h2 className="font-serif text-3xl">Ready to find a Saathi?</h2>
           <p className="text-muted-foreground">
             Search above or post your own trip. Signing up takes a minute — linking your second
             verification channel takes another two.
@@ -140,7 +140,7 @@ const STEPS = [
   },
   {
     title: 'Match by language',
-    body: 'Sathi ranks every solo traveller on that route by the language they share with your parent, then by date proximity and trust signals.',
+    body: 'Saathi ranks every solo traveller on that route by the language they share with your parent, then by date proximity and trust signals.',
   },
   {
     title: 'Chat and meet',

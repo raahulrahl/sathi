@@ -1,5 +1,5 @@
 -- 0001_init.sql
--- Sathi core schema. See Product Spec §4.
+-- Saathi core schema. See Product Spec §4.
 --
 -- Design notes:
 --   * auth.users is owned by Supabase Auth; we never insert into it directly.

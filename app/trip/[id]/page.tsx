@@ -1,3 +1,4 @@
+import { auth } from '@clerk/nextjs/server';
 import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
@@ -29,7 +30,7 @@ export async function generateMetadata({ params }: TripPageProps): Promise<Metad
   if (!data) return { title: 'Trip not found' };
   return {
     title: `${data.kind === 'request' ? 'Request' : 'Offer'}: ${data.route.join(' → ')}`,
-    description: `${format(parseISO(data.travel_date), 'd LLL yyyy')} — on Sathi`,
+    description: `${format(parseISO(data.travel_date), 'd LLL yyyy')} — on Saathi`,
   };
 }
 
@@ -49,9 +50,9 @@ export default async function TripPage({ params }: TripPageProps) {
     supabase.from('profile_review_stats').select('*').eq('user_id', trip.user_id).maybeSingle(),
   ]);
 
-  const { data: userResp } = await supabase.auth.getUser();
-  const viewer = userResp.user ?? null;
-  const isOwner = viewer?.id === trip.user_id;
+  const { userId } = await auth();
+  const viewer = userId ?? null;
+  const isOwner = viewer === trip.user_id;
   const isRequest = trip.kind === 'request';
   const helpLabels = new Map(HELP_CATEGORIES.map((h) => [h.key, h]));
 
@@ -145,7 +146,7 @@ export default async function TripPage({ params }: TripPageProps) {
           {isRequest && trip.thank_you_eur ? (
             <section className="rounded-lg border bg-saffron-50 p-4 text-sm">
               <b>Thank-you: €{trip.thank_you_eur}.</b> Settled directly between family and companion
-              — Sathi never touches payments.
+              — Saathi never touches payments.
             </section>
           ) : null}
         </article>

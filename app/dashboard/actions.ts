@@ -1,5 +1,6 @@
 'use server';
 
+import { auth } from '@clerk/nextjs/server';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
@@ -18,8 +19,8 @@ export async function respondToMatchRequestAction(input: z.infer<typeof Input>) 
   const parsed = Input.safeParse(input);
   if (!parsed.success) return { ok: false, error: 'Bad input' } as const;
   const supabase = await createSupabaseServerClient();
-  const { data: userResp } = await supabase.auth.getUser();
-  if (!userResp.user) return { ok: false, error: 'Not signed in' } as const;
+  const { userId } = await auth();
+  if (!userId) return { ok: false, error: 'Not signed in' } as const;
 
   const { error } = await supabase
     .from('match_requests')

@@ -1,3 +1,4 @@
+import { auth } from '@clerk/nextjs/server';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import type { Metadata } from 'next';
@@ -19,9 +20,9 @@ export const dynamic = 'force-dynamic';
 
 export default async function DashboardPage() {
   const supabase = await createSupabaseServerClient();
-  const { data: userResp } = await supabase.auth.getUser();
-  if (!userResp.user) redirect('/auth/sign-in?next=/dashboard');
-  const uid = userResp.user.id;
+  const { userId } = await auth();
+  if (!userId) redirect('/auth/sign-in?next=/dashboard');
+  const uid = userId;
 
   const [myTrips, incoming, outgoing, matches] = await Promise.all([
     supabase

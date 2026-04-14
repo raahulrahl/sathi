@@ -4,16 +4,16 @@ export const metadata: Metadata = { title: 'FAQ' };
 
 const QAS = [
   {
-    q: 'Does Sathi take a cut of the thank-you?',
-    a: 'No. Money moves directly between the family and the companion in whatever currency and app they prefer — Revolut, UPI, cash at the gate. Sathi never sees it.',
+    q: 'Does Saathi take a cut of the thank-you?',
+    a: 'No. Money moves directly between the family and the companion in whatever currency and app they prefer — Revolut, UPI, cash at the gate. Saathi never sees it.',
   },
   {
     q: 'How is this different from airport meet-and-assist services?',
-    a: "Airport paid services cost €80–120, are uniformed, and rarely speak your parent's language. Sathi is cheaper and picks someone who actually shares a mother tongue.",
+    a: "Airport paid services cost €80–120, are uniformed, and rarely speak your parent's language. Saathi is cheaper and picks someone who actually shares a mother tongue.",
   },
   {
     q: "What happens if my companion doesn't show up?",
-    a: "You can cancel or dispute the match. The companion's profile loses its badges. Sathi doesn't guarantee performance beyond social verification — this is why the thank-you is small, and not pre-paid.",
+    a: "You can cancel or dispute the match. The companion's profile loses its badges. Saathi doesn't guarantee performance beyond social verification — this is why the thank-you is small, and not pre-paid.",
   },
   {
     q: 'Can the same person be both a family and a companion?',

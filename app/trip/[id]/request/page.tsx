@@ -1,3 +1,4 @@
+import { auth } from '@clerk/nextjs/server';
 import { redirect, notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -12,12 +13,12 @@ export const metadata: Metadata = { title: 'Send a request' };
 export default async function SendRequestPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const supabase = await createSupabaseServerClient();
-  const { data: userResp } = await supabase.auth.getUser();
-  if (!userResp.user) redirect(`/auth/sign-in?next=/trip/${id}/request`);
+  const { userId } = await auth();
+  if (!userId) redirect(`/auth/sign-in?next=/trip/${id}/request`);
 
   const { data: trip } = await supabase.from('public_trips').select('*').eq('id', id).maybeSingle();
   if (!trip) notFound();
-  if (trip.user_id === userResp.user.id) redirect(`/trip/${id}`);
+  if (trip.user_id === userId) redirect(`/trip/${id}`);
   if (trip.status !== 'open') redirect(`/trip/${id}`);
 
   const [{ data: existing }, { data: verifs }, { data: poster }] = await Promise.all([
@@ -25,9 +26,9 @@ export default async function SendRequestPage({ params }: { params: Promise<{ id
       .from('match_requests')
       .select('id, status, created_at')
       .eq('trip_id', id)
-      .eq('requester_id', userResp.user.id)
+      .eq('requester_id', userId)
       .maybeSingle(),
-    supabase.from('verifications').select('channel, verified_at').eq('user_id', userResp.user.id),
+    supabase.from('verifications').select('channel, verified_at').eq('user_id', userId),
     supabase
       .from('public_profiles')
       .select('display_name, primary_language, role')
