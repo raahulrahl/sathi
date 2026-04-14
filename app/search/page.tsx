@@ -2,7 +2,7 @@ import { auth } from '@clerk/nextjs/server';
 import { Suspense } from 'react';
 import type { Metadata } from 'next';
 import { Calendar, Compass } from 'lucide-react';
-import { RouteSearch } from '@/components/route-search';
+import { FlightComposer } from '@/components/flight-composer';
 import { TripCard, type TripCardData } from '@/components/trip-card';
 import { EmptyState } from '@/components/empty-state';
 import { Separator } from '@/components/ui/separator';
@@ -33,21 +33,40 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
     .filter(Boolean);
   const validInput = isValidIata(f) && isValidIata(t) && !!date;
 
+  // Role powers FlightComposer's Offer-mode submit target.
+  let viewerRole: 'family' | 'companion' | null = null;
+  const { userId } = await auth();
+  if (userId) {
+    const supabase = await createSupabaseServerClient();
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', userId)
+      .maybeSingle();
+    if (profile?.role === 'family' || profile?.role === 'companion') {
+      viewerRole = profile.role;
+    }
+  }
+
   return (
     <div className="container py-8">
       <div className="space-y-1">
-        <h1 className="font-serif text-3xl">Who&apos;s on this flight?</h1>
-        <p className="text-sm text-muted-foreground">
+        <h1 className="font-display text-3xl font-semibold tracking-tight md:text-4xl">
+          Who&apos;s on this flight?
+        </h1>
+        <p className="text-sm text-warm-charcoal">
           {flightNumbers.length > 0
             ? 'Exact flight-number matches — everyone here is on at least one leg you named.'
-            : 'Same-day route matches. Add a flight number to tighten the search to the same aircraft.'}
+            : '±1 day around your date. Add a flight number to tighten to the same aircraft.'}
         </p>
       </div>
 
-      <RouteSearch
+      <FlightComposer
         className="mt-6"
-        defaultFrom={f}
-        defaultTo={t}
+        variant="compact"
+        defaultMode="seek"
+        viewerRole={viewerRole}
+        {...(f && t ? { defaultRoute: [f, t] } : {})}
         {...(date ? { defaultDate: date } : {})}
         {...(flightNumbers.length > 0 ? { defaultFlightNumbers: flightNumbers } : {})}
       />

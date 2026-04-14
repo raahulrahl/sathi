@@ -1,14 +1,32 @@
 import Link from 'next/link';
+import { auth } from '@clerk/nextjs/server';
 import { Heart, Plane, ShieldCheck, Users } from 'lucide-react';
-import { RouteSearch } from '@/components/route-search';
+import { FlightComposer } from '@/components/flight-composer';
 import { Card, CardContent } from '@/components/ui/card';
+import { createSupabaseServerClient } from '@/lib/supabase/server';
 
-export default function LandingPage() {
+export default async function LandingPage() {
+  // Role lets the FlightComposer default its Offer-mode submit target to
+  // the correct post wizard (request for families, offer for companions).
+  let viewerRole: 'family' | 'companion' | null = null;
+  const { userId } = await auth();
+  if (userId) {
+    const supabase = await createSupabaseServerClient();
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', userId)
+      .maybeSingle();
+    if (profile?.role === 'family' || profile?.role === 'companion') {
+      viewerRole = profile.role;
+    }
+  }
+
   return (
     <div className="flex flex-col">
-      {/* Hero — cream canvas, huge Clay-scale display type, playful CTAs */}
+      {/* Hero — cream canvas, huge Clay-scale display type, Flight Composer */}
       <section className="relative overflow-hidden">
-        <div className="container flex flex-col items-center gap-10 py-16 md:py-28">
+        <div className="container flex flex-col items-center gap-10 py-16 md:py-24">
           <div className="flex max-w-4xl flex-col items-center gap-6 text-center">
             <span className="clay-label rounded-full border border-oat bg-white px-3 py-1">
               साथी · a companion on the flight home
@@ -22,10 +40,15 @@ export default function LandingPage() {
             </p>
           </div>
 
-          <RouteSearch className="w-full max-w-4xl" />
+          <FlightComposer
+            variant="hero"
+            defaultMode="seek"
+            viewerRole={viewerRole}
+            className="max-w-4xl"
+          />
 
           <p className="text-sm text-warm-silver">
-            Browse freely. Sign in when you want to post a trip or send a request.
+            <b>Seek</b> browses trips. <b>Offer</b> posts your own. Both free.
           </p>
         </div>
       </section>
