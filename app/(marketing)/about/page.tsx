@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { Linkedin, Mail, MessageCircle, Twitter } from 'lucide-react';
+import { Linkedin, MessageCircle, Twitter } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 
 export const metadata: Metadata = {
@@ -11,17 +11,12 @@ const CHANNELS = [
   {
     icon: Linkedin,
     name: 'LinkedIn',
-    body: 'A real employer, a real network. Fake-able, but hard to fake alongside three other channels.',
+    body: 'A real employer, a real network. Fake-able alone, but hard to fake alongside the others.',
   },
   {
     icon: Twitter,
     name: 'X (Twitter)',
     body: 'Account age and history are visible proxies for whether the person exists outside of this app.',
-  },
-  {
-    icon: Mail,
-    name: 'Email',
-    body: 'Automatically verified at signup — magic link or OAuth.',
   },
   {
     icon: MessageCircle,
@@ -84,8 +79,8 @@ export default function AboutPage() {
         <h2 className="mt-2 font-serif text-4xl">Verification, not paperwork.</h2>
         <p className="mt-4 text-lg text-muted-foreground">
           Saathi doesn&apos;t do passport uploads. Verification is <b>social-graph based</b>: every
-          user must connect at least two of LinkedIn, X, email, and WhatsApp before they can post a
-          trip or send a request.
+          user must connect at least two of LinkedIn, X, and WhatsApp before they can post a trip or
+          send a request.
         </p>
       </header>
 
@@ -131,9 +126,32 @@ export default function AboutPage() {
       <section className="mt-16 space-y-3">
         <h2 className="font-serif text-2xl">Who&apos;s behind this</h2>
         <p className="text-muted-foreground">
-          Saathi is an independent project. Early community and build updates live on{' '}
-          <a href="https://musingsonai.beehiiv.com" className="underline">
-            Musings on AI
+          Saathi is an open-source effort, currently maintained by{' '}
+          <a
+            href="https://github.com/raahulrahl"
+            className="underline"
+            target="_blank"
+            rel="noreferrer"
+          >
+            Raahul
+          </a>{' '}
+          and{' '}
+          <a
+            href="https://github.com/dikshaSahni"
+            className="underline"
+            target="_blank"
+            rel="noreferrer"
+          >
+            Diksha
+          </a>
+          . Issues, ideas, and PRs are welcome on{' '}
+          <a
+            href="https://github.com/raahulrahl/sathi"
+            className="underline"
+            target="_blank"
+            rel="noreferrer"
+          >
+            GitHub
           </a>
           .
         </p>

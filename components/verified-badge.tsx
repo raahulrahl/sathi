@@ -45,7 +45,7 @@ export function VerifiedBadgeCount({ count, className }: { count: number; classN
   return (
     <Badge variant="success" className={cn('gap-1', className)}>
       <Check className="size-3" />
-      {count} of 4 verified
+      {count} of 3 verified
     </Badge>
   );
 }

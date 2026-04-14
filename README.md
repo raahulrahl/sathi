@@ -12,7 +12,9 @@ high-level shape:
   post offers. Search matches by **shared language first**, then by date
   proximity, then route exactness and verification depth.
 - **Verification is social-graph based.** Users must link ≥2 of LinkedIn, X,
-  email, WhatsApp before they can post or send a request. No passport uploads.
+  or WhatsApp before they can post or send a request. Email is captured for
+  login + notifications but intentionally doesn't count as a channel — every
+  sign-up verifies one, so counting it would give a free badge.
 - **Saathi never touches money.** The thank-you (€10–20) is settled directly
   between family and companion.
 

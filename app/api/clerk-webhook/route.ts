@@ -138,7 +138,8 @@ export async function POST(request: NextRequest) {
         .eq('id', u.id);
     }
 
-    // Mirror verified email + each external account into verifications.
+    // Mirror each verified external account into verifications. Email is
+    // intentionally excluded — see lib/clerk-sync.ts for rationale.
     const verifications: Array<{
       user_id: string;
       channel: string;
@@ -146,21 +147,6 @@ export async function POST(request: NextRequest) {
       verified_at: string;
       proof: Record<string, unknown>;
     }> = [];
-
-    if (primaryEmail) {
-      const verifiedEmail = u.email_addresses?.find(
-        (e) => e.email_address === primaryEmail && e.verification?.status === 'verified',
-      );
-      if (verifiedEmail) {
-        verifications.push({
-          user_id: u.id,
-          channel: 'email',
-          handle: primaryEmail,
-          verified_at: new Date().toISOString(),
-          proof: { via: 'clerk', provider: 'email' },
-        });
-      }
-    }
 
     for (const acc of u.external_accounts ?? []) {
       if (acc.verification?.status !== 'verified') continue;

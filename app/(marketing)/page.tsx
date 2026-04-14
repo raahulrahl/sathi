@@ -74,8 +74,8 @@ export default function LandingPage() {
               <li className="flex gap-3">
                 <ShieldCheck className="mt-0.5 size-5 shrink-0 text-saffron-600" />
                 <span>
-                  Trust comes from a social graph: LinkedIn, X, email, WhatsApp — two or more,
-                  verified, visible.
+                  Trust comes from a social graph: LinkedIn, X, WhatsApp — two or more, verified,
+                  visible.
                 </span>
               </li>
               <li className="flex gap-3">

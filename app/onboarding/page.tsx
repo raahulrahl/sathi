@@ -1,10 +1,11 @@
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { auth } from '@clerk/nextjs/server';
-import { Check, Linkedin, Mail, MessageCircle, Twitter } from 'lucide-react';
+import { Check, Linkedin, MessageCircle, Twitter } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
+import { syncClerkUserToSupabase } from '@/lib/clerk-sync';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { LinkOAuthButton } from './link-oauth-button';
 import { WhatsAppVerify } from './whatsapp-verify';
@@ -13,7 +14,7 @@ import { ProfileBasics } from './profile-basics';
 export const metadata: Metadata = { title: 'Welcome to Saathi' };
 
 const CHANNELS: Array<{
-  id: 'linkedin' | 'twitter' | 'email' | 'whatsapp';
+  id: 'linkedin' | 'twitter' | 'whatsapp';
   label: string;
   blurb: string;
   icon: React.ComponentType<{ className?: string }>;
@@ -34,13 +35,6 @@ const CHANNELS: Array<{
     linkable: true,
   },
   {
-    id: 'email',
-    label: 'Email',
-    blurb: 'Auto-verified on signup for email / magic-link / OAuth flows.',
-    icon: Mail,
-    linkable: false,
-  },
-  {
     id: 'whatsapp',
     label: 'WhatsApp',
     blurb: 'A working WhatsApp number. Lingua franca for Indian parents.',
@@ -53,6 +47,11 @@ export default async function OnboardingPage() {
   const { userId } = await auth();
   if (!userId) redirect('/auth/sign-in?redirect_url=/onboarding');
 
+  // Self-heal so the app works even before the Clerk webhook is wired up.
+  // Pulls the current Clerk user state and writes profile + verifications
+  // rows. Idempotent — safe to run on every load.
+  await syncClerkUserToSupabase(userId);
+
   const supabase = await createSupabaseServerClient();
 
   const [{ data: profile }, { data: verifications }] = await Promise.all([
@@ -64,8 +63,10 @@ export default async function OnboardingPage() {
     (verifications ?? []).filter((v) => v.verified_at).map((v) => v.channel),
   );
   // Google counts toward the 2-of-4 minimum alongside the four channels below
-  // (§8 listed LinkedIn / X / email / WhatsApp; Google OAuth ships as the
-  // primary sign-in path with Clerk and is a strong signal on its own).
+  // Email is intentionally NOT counted — every Clerk sign-up verifies an
+  // email, so counting it would give a free badge. Google (via OAuth link)
+  // still counts. The minimum is ≥2 of the available channels (LinkedIn,
+  // X, WhatsApp, Google).
   const verifiedCount = verifiedChannels.size;
   const canPost = verifiedCount >= 2;
 
@@ -135,12 +136,6 @@ export default async function OnboardingPage() {
                   <p className="text-sm text-muted-foreground">{blurb}</p>
                   {!verified && linkable && (id === 'linkedin' || id === 'twitter') ? (
                     <LinkOAuthButton provider={id} />
-                  ) : null}
-                  {!verified && id === 'email' ? (
-                    <p className="text-xs text-muted-foreground">
-                      Verified automatically when you sign in via email magic link or OAuth. Most
-                      accounts already have this badge.
-                    </p>
                   ) : null}
                   {id === 'whatsapp' ? <WhatsAppVerify alreadyVerified={verified} /> : null}
                 </CardContent>
