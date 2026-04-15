@@ -24,7 +24,8 @@ import { auth } from '@clerk/nextjs/server';
 import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
 import { checkRateLimit, clientIp } from '@/lib/rate-limit';
-import { isPlausibleE164, startWhatsAppVerification } from '@/lib/verify';
+import { isPlausibleE164 } from '@/lib/verify';
+import { startWhatsAppVerification } from '@/lib/whatsapp-auth';
 
 const Body = z.object({ phone: z.string().trim() });
 
