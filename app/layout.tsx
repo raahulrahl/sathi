@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Geist, Space_Mono } from 'next/font/google';
+import Script from 'next/script';
 import { ClerkProvider } from '@clerk/nextjs';
 import { Analytics } from '@vercel/analytics/next';
 import { SpeedInsights } from '@vercel/speed-insights/next';
@@ -81,6 +82,22 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       }}
     >
       <html lang="en" className={`${display.variable} ${mono.variable}`}>
+        <head>
+          {/*
+            Cookiebot consent banner. Must load before any other tracking so
+            `data-blockingmode="auto"` can scan and block non-consented scripts
+            (Analytics, PostHog, etc.) until the user has made a choice.
+            `beforeInteractive` injects this into <head> before the app
+            hydrates, which is Cookiebot's required placement.
+          */}
+          <Script
+            id="Cookiebot"
+            src="https://consent.cookiebot.com/uc.js"
+            data-cbid="596afdb9-7000-47cc-8031-2c6d357be0bf"
+            data-blockingmode="auto"
+            strategy="beforeInteractive"
+          />
+        </head>
         <body className="flex min-h-screen flex-col bg-background font-sans text-foreground antialiased">
           <SiteHeader />
           <main className="flex-1">{children}</main>
