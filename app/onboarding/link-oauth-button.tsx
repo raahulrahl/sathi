@@ -4,19 +4,16 @@ import { useState } from 'react';
 import { useUser } from '@clerk/nextjs';
 import { Button } from '@/components/ui/button';
 
-type LinkableProvider = 'linkedin' | 'twitter' | 'google';
+type LinkableProvider = 'linkedin' | 'twitter';
 
-const CLERK_STRATEGY: Record<LinkableProvider, 'oauth_linkedin_oidc' | 'oauth_x' | 'oauth_google'> =
-  {
-    linkedin: 'oauth_linkedin_oidc',
-    twitter: 'oauth_x',
-    google: 'oauth_google',
-  };
+const CLERK_STRATEGY: Record<LinkableProvider, 'oauth_linkedin_oidc' | 'oauth_x'> = {
+  linkedin: 'oauth_linkedin_oidc',
+  twitter: 'oauth_x',
+};
 
 const LABEL: Record<LinkableProvider, string> = {
   linkedin: 'LinkedIn',
   twitter: 'X',
-  google: 'Google',
 };
 
 /**

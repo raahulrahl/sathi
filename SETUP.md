@@ -77,18 +77,24 @@ And in **Database → Functions**: `public.clerk_user_id()`.
 
 ### Enable OAuth providers
 
-**User & Authentication → Social Connections**, enable:
+**User & Authentication → Social Connections**, enable exactly these two:
 
-- Google
-- LinkedIn (OIDC) — picks up the `oauth_linkedin_oidc` provider string
-- X (Twitter)
-- GitHub (optional)
+- **LinkedIn (OIDC)** — picks up the `oauth_linkedin_oidc` provider string
+- **X (Twitter)**
 
-For each, either use Clerk's shared credentials (fine for dev) or create an
-OAuth app on the provider's side and paste client ID + secret. The webhook
-in `app/api/clerk-webhook/route.ts` maps Clerk's provider strings to the
-`verifications.channel` enum — it handles `oauth_linkedin_oidc`,
-`oauth_x`/`oauth_twitter`, `oauth_google`, `oauth_github`.
+Google and GitHub are deliberately **not** used — the product decision is
+that trust signals should come from graphs where the presence of an account
+is itself meaningful (LinkedIn = real job, X = real network), not from
+"everyone already has one" identity providers. Leave Email on; it's the
+fallback sign-in method and doesn't count as a verification channel
+(every Clerk sign-up verifies email — counting it would give a free badge).
+
+For each provider, either use Clerk's shared credentials (fine for dev) or
+create an OAuth app on the provider's side and paste client ID + secret.
+The webhook in `app/api/clerk-webhook/route.ts` and the self-heal in
+`lib/clerk-sync.ts` both map `oauth_linkedin_oidc` / `oauth_linkedin` to
+`linkedin`, and `oauth_x` / `oauth_twitter` to `twitter`. Any other
+provider Clerk reports is ignored.
 
 ---
 

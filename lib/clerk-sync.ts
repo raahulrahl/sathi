@@ -23,6 +23,8 @@ type Verif = {
   proof: Record<string, unknown>;
 };
 
+// Mirrors app/api/clerk-webhook/route.ts — only LinkedIn and X are enabled
+// providers. Google and GitHub are deliberately off (product decision).
 function providerToChannel(provider: string): string | null {
   switch (provider) {
     case 'oauth_linkedin_oidc':
@@ -31,10 +33,6 @@ function providerToChannel(provider: string): string | null {
     case 'oauth_x':
     case 'oauth_twitter':
       return 'twitter';
-    case 'oauth_google':
-      return 'google';
-    case 'oauth_github':
-      return 'github';
     default:
       return null;
   }

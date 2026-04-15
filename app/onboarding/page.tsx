@@ -62,11 +62,9 @@ export default async function OnboardingPage() {
   const verifiedChannels = new Set(
     (verifications ?? []).filter((v) => v.verified_at).map((v) => v.channel),
   );
-  // Google counts toward the 2-of-4 minimum alongside the four channels below
   // Email is intentionally NOT counted — every Clerk sign-up verifies an
-  // email, so counting it would give a free badge. Google (via OAuth link)
-  // still counts. The minimum is ≥2 of the available channels (LinkedIn,
-  // X, WhatsApp, Google).
+  // email, so counting it would give a free badge. The minimum is ≥2 of
+  // the three available channels: LinkedIn, X, WhatsApp.
   const verifiedCount = verifiedChannels.size;
   const canPost = verifiedCount >= 2;
 
@@ -121,7 +119,7 @@ export default async function OnboardingPage() {
                 <CardContent className="space-y-3 p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-2">
-                      <Icon className="size-5 text-saffron-600" aria-hidden />
+                      <Icon className="text-saffron-600 size-5" aria-hidden />
                       <div className="font-serif text-lg">{label}</div>
                     </div>
                     {verified ? (

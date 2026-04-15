@@ -4,7 +4,7 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSignIn, useSignUp } from '@clerk/nextjs';
 
-type OAuthStrategy = 'oauth_google' | 'oauth_linkedin_oidc' | 'oauth_x';
+type OAuthStrategy = 'oauth_linkedin_oidc' | 'oauth_x';
 import { Linkedin, Mail, Twitter } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -141,10 +141,6 @@ export function SignInForm({ afterSignInUrl, serverError }: SignInFormProps) {
       {stage === 'email' ? (
         <>
           <div className="grid gap-2">
-            <Button variant="outline" size="lg" onClick={() => oauth('oauth_google')}>
-              <GoogleMark className="size-4" />
-              Continue with Google
-            </Button>
             <Button variant="outline" size="lg" onClick={() => oauth('oauth_linkedin_oidc')}>
               <Linkedin className="size-4" />
               Continue with LinkedIn
@@ -241,28 +237,5 @@ function isNoAccountError(err: unknown): boolean {
     msg.includes("couldn't find your account") ||
     msg.includes('no account') ||
     msg.includes('identifier')
-  );
-}
-
-function GoogleMark({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" aria-hidden>
-      <path
-        fill="#4285F4"
-        d="M23.49 12.27c0-.79-.07-1.54-.19-2.27H12v4.51h6.44c-.28 1.49-1.12 2.75-2.37 3.6v3h3.83c2.24-2.06 3.59-5.1 3.59-8.84z"
-      />
-      <path
-        fill="#34A853"
-        d="M12 24c3.24 0 5.96-1.08 7.94-2.91l-3.83-3c-1.07.72-2.44 1.15-4.11 1.15-3.17 0-5.85-2.14-6.81-5.02H1.24v3.15C3.22 21.3 7.32 24 12 24z"
-      />
-      <path
-        fill="#FBBC05"
-        d="M5.19 14.22A7.2 7.2 0 014.8 12c0-.77.13-1.52.39-2.22V6.63H1.24A12 12 0 000 12c0 1.93.46 3.76 1.24 5.37l3.95-3.15z"
-      />
-      <path
-        fill="#EA4335"
-        d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.4-3.4C17.95 1.17 15.23 0 12 0 7.32 0 3.22 2.7 1.24 6.63l3.95 3.15C6.15 6.89 8.83 4.75 12 4.75z"
-      />
-    </svg>
   );
 }

@@ -13,11 +13,14 @@ const nextConfig = {
     remotePatterns: [
       // Supabase Storage public buckets
       { protocol: 'https', hostname: '**.supabase.co' },
-      // OAuth avatar sources
-      { protocol: 'https', hostname: 'lh3.googleusercontent.com' },
+      // OAuth avatar sources — only the providers actually enabled in Clerk.
+      // Google / GitHub hosts removed: those providers aren't offered for
+      // sign-in, so users will never have those avatar URLs.
       { protocol: 'https', hostname: 'media.licdn.com' },
       { protocol: 'https', hostname: 'pbs.twimg.com' },
-      { protocol: 'https', hostname: 'avatars.githubusercontent.com' },
+      // Clerk's default avatar CDN (used as fallback when no OAuth avatar
+      // exists — e.g. email-only sign-ups).
+      { protocol: 'https', hostname: 'img.clerk.com' },
     ],
   },
   experimental: {

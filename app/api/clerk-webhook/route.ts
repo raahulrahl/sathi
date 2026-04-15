@@ -47,6 +47,12 @@ type ClerkWebhookEvent =
 /**
  * Map Clerk's provider string to our verifications.channel enum.
  * Clerk providers: https://clerk.com/docs/authentication/social-connections/overview
+ *
+ * Only LinkedIn and X (Twitter) are enabled in Clerk for this app —
+ * Google and GitHub are deliberately omitted (product decision: we
+ * want trust signals rooted in real social/professional graphs, not
+ * a Google login that every human on Earth already has). If either
+ * is re-enabled in Clerk, add the case back here.
  */
 function providerToChannel(provider: string): string | null {
   switch (provider) {
@@ -56,10 +62,6 @@ function providerToChannel(provider: string): string | null {
     case 'oauth_x':
     case 'oauth_twitter':
       return 'twitter';
-    case 'oauth_google':
-      return 'google';
-    case 'oauth_github':
-      return 'github';
     default:
       return null;
   }
