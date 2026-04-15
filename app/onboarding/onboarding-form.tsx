@@ -105,6 +105,7 @@ interface OnboardingFormProps {
     role: 'family' | 'companion' | null;
     languages: string[];
     whatsappNumber: string;
+    whatsappValidatedAt: string | null;
     bio: string;
     linkedinUrl: string;
     facebookUrl: string;
@@ -123,6 +124,17 @@ export function OnboardingForm({ initialValues }: OnboardingFormProps) {
   const [role, setRole] = useState<'family' | 'companion' | null>(initialValues.role);
   const [languages, setLanguages] = useState<string[]>(initialValues.languages);
   const [whatsappNumber, setWhatsappNumber] = useState(initialValues.whatsappNumber);
+  // Track whether the current value of whatsappNumber has been OTP-verified
+  // via Twilio. Initialised from the DB-stored validated-at timestamp — if
+  // it's set AND the input still matches what was validated, we trust it.
+  // Once the user edits the number we flip verifiedPhone back to null so
+  // they're prompted to re-run the OTP.
+  const [validatedPhone, setValidatedPhone] = useState<string | null>(
+    initialValues.whatsappValidatedAt && initialValues.whatsappNumber
+      ? initialValues.whatsappNumber
+      : null,
+  );
+  const whatsappVerified = validatedPhone !== null && validatedPhone === whatsappNumber.trim();
   const [bio, setBio] = useState(initialValues.bio);
   const [socials, setSocials] = useState<Record<SocialKey, string>>({
     linkedinUrl: initialValues.linkedinUrl,
@@ -306,10 +318,18 @@ export function OnboardingForm({ initialValues }: OnboardingFormProps) {
             languages={languages}
             setLanguages={setLanguages}
             whatsappNumber={whatsappNumber}
-            setWhatsappNumber={setWhatsappNumber}
+            setWhatsappNumber={(v) => {
+              setWhatsappNumber(v);
+              // Editing the number invalidates any previous OTP — the
+              // validatedPhone state handles this via equality check, but
+              // we surface it to the user by forcing them to re-run the
+              // flow if they want the "verified" badge back.
+            }}
             phoneState={phoneState}
             phoneTouched={phoneTouched}
             setPhoneTouched={setPhoneTouched}
+            whatsappVerified={whatsappVerified}
+            onVerified={() => setValidatedPhone(whatsappNumber.trim())}
           />
         ) : (
           <Step3
@@ -431,6 +451,8 @@ function Step2({
   phoneState,
   phoneTouched,
   setPhoneTouched,
+  whatsappVerified,
+  onVerified,
 }: {
   role: 'family' | 'companion' | null;
   languages: string[];
@@ -440,12 +462,10 @@ function Step2({
   phoneState: { valid: boolean; message: string | null };
   phoneTouched: boolean;
   setPhoneTouched: (b: boolean) => void;
+  whatsappVerified: boolean;
+  onVerified: () => void;
 }) {
   const langLabel = role === 'family' ? 'Your parent’s languages' : 'Languages you can help in';
-  const langHelper =
-    role === 'family'
-      ? "Pick the strongest first — that's what we match on."
-      : "Pick the strongest first — that's what we match on.";
 
   return (
     <>
@@ -458,7 +478,9 @@ function Step2({
           markFirstAsPrimary
           placeholder="Pick one or more…"
         />
-        <p className="text-xs text-warm-silver">{langHelper}</p>
+        <p className="text-xs text-warm-silver">
+          Pick the strongest first — that&rsquo;s what we match on.
+        </p>
       </div>
 
       <div className="space-y-2">
@@ -482,6 +504,18 @@ function Step2({
         ) : (
           <p className="text-xs text-warm-silver">Include the country code, starting with +.</p>
         )}
+
+        {/* OTP verification — live Twilio Verify round-trip. Shown only
+            when the phone format is valid. Ownership-proof signal on top
+            of the Lookup API's "is a real number" check. */}
+        {phoneState.valid ? (
+          <WhatsAppOtpVerify
+            phone={whatsappNumber.trim()}
+            verified={whatsappVerified}
+            onVerified={onVerified}
+          />
+        ) : null}
+
         <p className="flex items-start gap-1.5 text-xs text-warm-silver">
           <Lock className="mt-0.5 size-3 shrink-0" aria-hidden />
           Private. Only shared with your match after they accept.
@@ -580,5 +614,166 @@ function Step3({
         />
       </div>
     </>
+  );
+}
+
+// -----------------------------------------------------------------------------
+// WhatsApp OTP verification — inline Twilio Verify flow
+// -----------------------------------------------------------------------------
+/**
+ * Three-state inline widget:
+ *   idle     → "Verify via WhatsApp" button
+ *   sent     → code input + "Check" button (+ "Resend")
+ *   verified → matcha-coloured badge, "Re-verify" option
+ *
+ * Uses the existing /api/verify/whatsapp/start + /check endpoints. On
+ * successful /check the server stamps whatsapp_validated_at on the
+ * profile; here we also call onVerified() so the parent form knows to
+ * show the verified badge without a full reload.
+ */
+function WhatsAppOtpVerify({
+  phone,
+  verified,
+  onVerified,
+}: {
+  phone: string;
+  verified: boolean;
+  onVerified: () => void;
+}) {
+  const [phase, setPhase] = useState<'idle' | 'sent' | 'checking'>('idle');
+  const [code, setCode] = useState('');
+  const [message, setMessage] = useState<string | null>(null);
+  const [pending, start] = useTransition();
+
+  if (verified) {
+    return (
+      <div className="flex items-center justify-between rounded-md border border-matcha-300/60 bg-matcha-300/20 px-3 py-2 text-xs text-matcha-800">
+        <span className="flex items-center gap-1.5">
+          <CheckCircle2 className="size-3.5" aria-hidden />
+          WhatsApp verified.
+        </span>
+        <button
+          type="button"
+          onClick={() => setPhase('idle')}
+          className="underline-offset-4 hover:underline"
+        >
+          Re-verify
+        </button>
+      </div>
+    );
+  }
+
+  async function sendCode() {
+    setMessage(null);
+    start(async () => {
+      try {
+        const res = await fetch('/api/verify/whatsapp/start', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ phone }),
+        });
+        const json = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+        if (!res.ok || !json.ok) {
+          setMessage(json.error ?? `Couldn't send (${res.status}).`);
+          return;
+        }
+        setPhase('sent');
+      } catch (err) {
+        setMessage(err instanceof Error ? err.message : "Couldn't send.");
+      }
+    });
+  }
+
+  async function checkCode() {
+    setMessage(null);
+    setPhase('checking');
+    start(async () => {
+      try {
+        const res = await fetch('/api/verify/whatsapp/check', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ phone, code }),
+        });
+        const json = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+        if (res.ok && json.ok) {
+          onVerified();
+          setPhase('idle');
+          setCode('');
+          return;
+        }
+        setMessage(json.error ?? 'That code didn’t match.');
+        setPhase('sent');
+      } catch (err) {
+        setMessage(err instanceof Error ? err.message : 'Check failed.');
+        setPhase('sent');
+      }
+    });
+  }
+
+  if (phase === 'idle') {
+    return (
+      <div className="space-y-1.5">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={sendCode}
+          disabled={pending || !phone}
+          className="w-full"
+        >
+          {pending ? 'Sending…' : 'Verify this number via WhatsApp'}
+        </Button>
+        {message ? <p className="text-xs text-pomegranate-600">{message}</p> : null}
+        <p className="text-xs text-warm-silver">
+          We&rsquo;ll send a 6-digit code to this number on WhatsApp. Takes a few seconds.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2 rounded-md border border-oat bg-oat-light/40 p-3">
+      <p className="text-xs text-warm-charcoal">
+        Code sent to <b>{phone}</b>. Open WhatsApp and paste the 6-digit code here.
+      </p>
+      <div className="flex gap-2">
+        <Input
+          type="text"
+          inputMode="numeric"
+          pattern="[0-9]*"
+          maxLength={10}
+          placeholder="123456"
+          value={code}
+          onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
+          autoFocus
+          className="font-mono tracking-widest"
+        />
+        <Button type="button" size="sm" onClick={checkCode} disabled={pending || code.length < 4}>
+          {pending && phase === 'checking' ? 'Checking…' : 'Check'}
+        </Button>
+      </div>
+      {message ? <p className="text-xs text-pomegranate-600">{message}</p> : null}
+      <div className="flex items-center justify-between">
+        <button
+          type="button"
+          onClick={sendCode}
+          disabled={pending}
+          className="text-xs text-marigold-700 underline-offset-4 hover:underline disabled:opacity-50"
+        >
+          Resend code
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setPhase('idle');
+            setCode('');
+            setMessage(null);
+          }}
+          className="text-xs text-warm-silver underline-offset-4 hover:underline"
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
   );
 }

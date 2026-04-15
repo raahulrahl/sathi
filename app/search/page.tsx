@@ -165,20 +165,18 @@ async function Results({
       display_name: string | null;
       photo_url: string | null;
       primary_language: string;
-      verified_channel_count: number;
     }
   >();
   if (userIds.length > 0) {
     const { data: ps } = await supabase
       .from('public_profiles')
-      .select('id, display_name, photo_url, primary_language, verified_channel_count')
+      .select('id, display_name, photo_url, primary_language')
       .in('id', userIds);
     (ps ?? []).forEach((p) =>
       profilesById.set(p.id, {
         display_name: p.display_name,
         photo_url: p.photo_url,
         primary_language: p.primary_language,
-        verified_channel_count: p.verified_channel_count,
       }),
     );
   }
@@ -201,7 +199,6 @@ async function Results({
       thank_you_eur: tr.thank_you_eur,
       airline: tr.airline,
       flight_numbers: tr.flight_numbers ?? null,
-      verified_channel_count: p?.verified_channel_count ?? 0,
     };
     return {
       id: tr.id,
@@ -211,7 +208,6 @@ async function Results({
       languages: tr.languages,
       primary_language: p?.primary_language ?? null,
       flight_numbers: tr.flight_numbers ?? null,
-      verified_channel_count: p?.verified_channel_count ?? 0,
       kind: tr.kind,
       card,
     };

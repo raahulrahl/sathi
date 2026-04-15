@@ -11,7 +11,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { LanguageChipRow } from '@/components/language-chip';
 import { RouteLine } from '@/components/route-line';
-import { VerifiedBadge, VerifiedBadgeCount } from '@/components/verified-badge';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { HELP_CATEGORIES } from '@/lib/languages';
 
@@ -41,12 +40,8 @@ export default async function TripPage({ params }: TripPageProps) {
   const { data: trip } = await supabase.from('public_trips').select('*').eq('id', id).maybeSingle();
   if (!trip) notFound();
 
-  const [{ data: profile }, { data: verifs }, { data: reviewStats }] = await Promise.all([
+  const [{ data: profile }, { data: reviewStats }] = await Promise.all([
     supabase.from('public_profiles').select('*').eq('id', trip.user_id).maybeSingle(),
-    supabase
-      .from('public_verifications')
-      .select('channel, verified_at')
-      .eq('user_id', trip.user_id),
     supabase.from('profile_review_stats').select('*').eq('user_id', trip.user_id).maybeSingle(),
   ]);
 
@@ -153,7 +148,7 @@ export default async function TripPage({ params }: TripPageProps) {
           ) : null}
 
           {isRequest && trip.thank_you_eur ? (
-            <section className="rounded-lg border bg-saffron-50 p-4 text-sm">
+            <section className="bg-saffron-50 rounded-lg border p-4 text-sm">
               <b>Thank-you: €{trip.thank_you_eur}.</b> Settled directly between family and companion
               — Saathi never touches payments.
             </section>
@@ -184,15 +179,6 @@ export default async function TripPage({ params }: TripPageProps) {
                   <div className="text-xs capitalize text-muted-foreground">{profile?.role}</div>
                 </div>
               </Link>
-
-              <div className="space-y-2">
-                <VerifiedBadgeCount count={profile?.verified_channel_count ?? 0} />
-                <div className="flex flex-wrap gap-1.5">
-                  {(verifs ?? []).map((v) => (
-                    <VerifiedBadge key={v.channel} channel={v.channel} />
-                  ))}
-                </div>
-              </div>
 
               {reviewStats?.review_count ? (
                 <div className="text-sm">

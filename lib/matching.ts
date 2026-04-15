@@ -24,8 +24,13 @@
  *     route: same endpoints, different layovers             +15
  *     route: one-leg overlap                                 +5
  *     date delta:                                -5 per day
- *     verifications (capped at 4):                  +3 per channel
  *     reviews (count capped at 10 × avg/5):           0..10
+ *
+ * History: an earlier revision of this scorer also rewarded
+ * "verified_channel_count" at +3 per channel. That table was removed in
+ * 0009_profile_schema_cleanup — the signal was noisy (every Google sign-in
+ * counted the same as a real LinkedIn) and didn't correlate with trip
+ * quality. The scorer now leans entirely on language + route + date + reviews.
  */
 
 export interface RankableTrip {
@@ -36,7 +41,6 @@ export interface RankableTrip {
   languages: string[];
   primary_language?: string | null;
   flight_numbers?: string[] | null;
-  verified_channel_count?: number;
   review_count?: number;
   average_rating?: number | null;
 }
@@ -152,9 +156,6 @@ export function scoreTrip<T extends RankableTrip>(trip: T, criteria: SearchCrite
 
   score += rm === 'exact' ? 25 : rm === 'endpoints' ? 15 : rm === 'one-leg' ? 5 : 0;
   score -= delta * 5;
-
-  const verifCap = Math.min(trip.verified_channel_count ?? 0, 4);
-  score += verifCap * 3;
 
   const reviewCap = Math.min(trip.review_count ?? 0, 10);
   const avg = trip.average_rating ?? 0;

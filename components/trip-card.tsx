@@ -7,7 +7,6 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { LanguageChipRow } from '@/components/language-chip';
 import { RouteLine } from '@/components/route-line';
-import { VerifiedBadgeCount } from '@/components/verified-badge';
 import { cn } from '@/lib/utils';
 import type { Scored } from '@/lib/matching';
 
@@ -25,7 +24,6 @@ export interface TripCardData {
   thank_you_eur?: number | null;
   airline?: string | null;
   flight_numbers?: string[] | null;
-  verified_channel_count?: number;
 }
 
 interface TripCardProps {
@@ -157,7 +155,9 @@ export function TripCard({ data, viewerLanguages = [], scored, className }: Trip
         </CardContent>
 
         <CardFooter className="flex items-center justify-between border-t bg-muted/40 px-5 py-3">
-          <VerifiedBadgeCount count={data.verified_channel_count ?? 0} className="text-xs" />
+          <span className="text-xs text-warm-silver">
+            {data.airline ? data.airline : 'No airline listed'}
+          </span>
           {isRequest && data.thank_you_eur ? (
             <div className="text-sm font-medium">
               <Users className="mr-1 inline-block size-4 align-[-2px]" />

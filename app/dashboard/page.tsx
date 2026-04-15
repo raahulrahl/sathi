@@ -44,7 +44,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
       .select(
         `id, status, intro_message, created_at, requester_id,
          trip:trips!inner(id, kind, route, travel_date, user_id),
-         requester:public_profiles!match_requests_requester_id_fkey(id, display_name, photo_url, primary_language, verified_channel_count)`,
+         requester:public_profiles!match_requests_requester_id_fkey(id, display_name, photo_url, primary_language)`,
       )
       .eq('trip.user_id', uid)
       .eq('status', 'pending')
@@ -147,7 +147,6 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                     display_name: string | null;
                     photo_url: string | null;
                     primary_language: string;
-                    verified_channel_count: number;
                   };
                 }
               ).requester;
@@ -167,10 +166,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                         </div>
                         <div className="mt-1 text-xs text-muted-foreground">
                           {format(parseISO(trip.travel_date), 'EEE, d LLL yyyy')} ·{' '}
-                          {trip.route.join(' → ')} ·{' '}
-                          <Badge variant="muted" className="align-middle font-normal">
-                            {req?.verified_channel_count ?? 0} verified
-                          </Badge>
+                          {trip.route.join(' → ')}
                         </div>
                       </div>
                     </div>

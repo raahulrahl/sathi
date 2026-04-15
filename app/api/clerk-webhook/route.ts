@@ -104,7 +104,6 @@ export async function POST(request: NextRequest) {
       null;
 
     const displayName = [u.first_name, u.last_name?.[0]].filter(Boolean).join(' ') || null;
-    const fullName = [u.first_name, u.last_name].filter(Boolean).join(' ') || null;
 
     if (event.type === 'user.created') {
       // Create the profiles row. Defaults that onboarding overwrites.
@@ -113,7 +112,6 @@ export async function POST(request: NextRequest) {
           id: u.id,
           role: 'companion', // default; user switches in onboarding
           display_name: displayName,
-          full_name: fullName,
           photo_url: u.image_url ?? null,
           email: primaryEmail,
           languages: ['English'],
@@ -135,40 +133,13 @@ export async function POST(request: NextRequest) {
         .eq('id', u.id);
     }
 
-    // Mirror each verified external account into verifications. Email is
-    // intentionally excluded — see lib/clerk-sync.ts for rationale.
-    const verifications: Array<{
-      user_id: string;
-      channel: string;
-      handle: string;
-      verified_at: string;
-      proof: Record<string, unknown>;
-    }> = [];
-
-    for (const acc of u.external_accounts ?? []) {
-      if (acc.verification?.status !== 'verified') continue;
-      const channel = providerToChannel(acc.provider);
-      if (!channel) continue;
-      verifications.push({
-        user_id: u.id,
-        channel,
-        handle: acc.username ?? acc.email_address ?? '',
-        verified_at: new Date().toISOString(),
-        proof: { via: 'clerk', provider: acc.provider },
-      });
-    }
-
-    if (verifications.length > 0) {
-      const { error } = await supabase
-        .from('verifications')
-        .upsert(verifications, { onConflict: 'user_id,channel' });
-      if (error) {
-        return NextResponse.json(
-          { error: `verifications upsert: ${error.message}` },
-          { status: 500 },
-        );
-      }
-    }
+    // NOTE: we used to mirror verified OAuth accounts into a
+    // public.verifications table for trust badges. That table was
+    // dropped in 0009 — verification wasn't doing useful work after
+    // the onboarding simplification (no 2-of-N gate, inconsistent
+    // trust signal). providerToChannel() remains in the file as
+    // defensive documentation of which OAuth providers we support.
+    void providerToChannel; // keep ref for future re-use
   }
 
   // session.created and everything else: ignored for now.

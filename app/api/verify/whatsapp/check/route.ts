@@ -52,18 +52,18 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: false, error: 'Code did not match' }, { status: 400 });
   }
 
-  // Mirror the verification into the DB — matches the trigger behavior for
-  // OAuth identities, but for WhatsApp we do it from the API route.
-  const { error } = await supabase.from('verifications').upsert(
-    {
-      user_id: userId,
-      channel: 'whatsapp',
-      handle: parsed.data.phone,
-      verified_at: new Date().toISOString(),
-      proof: { channel: 'whatsapp', via: 'twilio_verify' },
-    },
-    { onConflict: 'user_id,channel' },
-  );
+  // Record the successful verification directly on the profile. We keep
+  // both the validated number and the timestamp — the number can be
+  // different from whatsapp_number on the profile if the user re-verified
+  // a new one without having saved it yet. The save flow reads
+  // whatsapp_validated_at at render time to show the "verified" badge.
+  const { error } = await supabase
+    .from('profiles')
+    .update({
+      whatsapp_number: parsed.data.phone,
+      whatsapp_validated_at: new Date().toISOString(),
+    })
+    .eq('id', userId);
 
   if (error) {
     return NextResponse.json({ ok: false, error: error.message }, { status: 500 });

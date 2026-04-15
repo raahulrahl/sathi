@@ -101,6 +101,19 @@ export async function saveOnboardingProfile(
   // use libphonenumber-js's normalisation.
   const finalPhone = lookup.valid === true ? lookup.e164 : normalisedPhone;
 
+  // Preserve whatsapp_validated_at ONLY if the user hasn't changed their
+  // phone number since it was last validated. If they've edited the
+  // number, clear the validated timestamp so the UI prompts them to
+  // re-run the OTP flow for the new one.
+  const { data: existing } = await supabase
+    .from('profiles')
+    .select('whatsapp_number, whatsapp_validated_at')
+    .eq('id', userId)
+    .maybeSingle();
+
+  const phoneUnchanged = existing?.whatsapp_number === finalPhone;
+  const preservedValidatedAt = phoneUnchanged ? existing?.whatsapp_validated_at : null;
+
   const { error } = await supabase
     .from('profiles')
     .update({
@@ -109,6 +122,7 @@ export async function saveOnboardingProfile(
       primary_language: parsed.data.primaryLanguage,
       languages: parsed.data.languages,
       whatsapp_number: finalPhone,
+      whatsapp_validated_at: preservedValidatedAt,
       bio: parsed.data.bio,
       linkedin_url: parsed.data.linkedinUrl,
       facebook_url: parsed.data.facebookUrl,
@@ -119,6 +133,26 @@ export async function saveOnboardingProfile(
 
   if (error) {
     return { ok: false, error: `Save failed: ${error.message}` };
+  }
+
+  // Mirror into the normalised profile_languages table.
+  // Wipe + reinsert strategy: simple, idempotent, correct. Volume per
+  // user is tiny (<10 languages) so the delete+insert cost is trivial.
+  await supabase.from('profile_languages').delete().eq('profile_id', userId);
+  const langRows = parsed.data.languages.map((language) => ({
+    profile_id: userId,
+    language,
+    is_primary: language === parsed.data.primaryLanguage,
+  }));
+  if (langRows.length > 0) {
+    const { error: langError } = await supabase.from('profile_languages').insert(langRows);
+    // Don't hard-fail the whole save on a language sync glitch; the
+    // profiles.languages array (denormalised cache) is the authoritative
+    // source of truth for display today.
+    if (langError) {
+      // eslint-disable-next-line no-console
+      console.warn('[onboarding] profile_languages sync failed:', langError.message);
+    }
   }
 
   revalidatePath('/dashboard');

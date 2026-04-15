@@ -17,7 +17,6 @@ const base: Omit<RankableTrip, 'id'> = {
   languages: ['English'],
   primary_language: 'English',
   flight_numbers: ['QR540', 'QR23'],
-  verified_channel_count: 2,
   review_count: 0,
   average_rating: null,
 };

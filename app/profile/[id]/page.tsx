@@ -9,7 +9,6 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { LanguageChipRow } from '@/components/language-chip';
 import { TripCard, type TripCardData } from '@/components/trip-card';
-import { VerifiedBadge, VerifiedBadgeCount } from '@/components/verified-badge';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 interface ProfilePageProps {
@@ -34,10 +33,9 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
   const { id } = await params;
   const supabase = await createSupabaseServerClient();
 
-  const [{ data: profile }, { data: verifs }, { data: stats }, { data: trips }, { data: reviews }] =
+  const [{ data: profile }, { data: stats }, { data: trips }, { data: reviews }] =
     await Promise.all([
       supabase.from('public_profiles').select('*').eq('id', id).maybeSingle(),
-      supabase.from('public_verifications').select('channel, verified_at').eq('user_id', id),
       supabase.from('profile_review_stats').select('*').eq('user_id', id).maybeSingle(),
       supabase.from('public_trips').select('*').eq('user_id', id).eq('status', 'open'),
       supabase
@@ -77,12 +75,6 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
           </div>
           {profile.bio ? <p className="text-sm leading-relaxed">{profile.bio}</p> : null}
           <LanguageChipRow languages={profile.languages} primary={profile.primary_language} />
-          <div className="flex flex-wrap items-center gap-2">
-            <VerifiedBadgeCount count={profile.verified_channel_count} />
-            {(verifs ?? []).map((v) => (
-              <VerifiedBadge key={v.channel} channel={v.channel} />
-            ))}
-          </div>
           {/* Self-reported social profile links. Not OAuth-verified — the
               onboarding form just takes URLs. Rendered as small icon
               buttons; inert if missing. */}
@@ -132,7 +124,6 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
                   help_categories: t.help_categories,
                   thank_you_eur: t.thank_you_eur,
                   airline: t.airline,
-                  verified_channel_count: profile.verified_channel_count,
                 };
                 return <TripCard key={t.id} data={card} />;
               })

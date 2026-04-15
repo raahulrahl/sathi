@@ -3,14 +3,14 @@ import { Geist, Geist_Mono, Space_Mono } from 'next/font/google';
 import { ClerkProvider } from '@clerk/nextjs';
 import { SiteHeader } from '@/components/site-header';
 import { SiteFooter } from '@/components/site-footer';
-import { HideOnRoute } from '@/components/hide-on-route';
 import './globals.css';
 
-// Routes where we hide the site header + footer (focused flows).
-// Keep this list small — only add a route here if showing the chrome
-// actively distracts from the task, e.g. onboarding where we don't want
-// to dangle exits at the user before they've completed their profile.
-const CHROMELESS_ROUTES = ['/onboarding'];
+// Header + footer stay on every page including /onboarding. An earlier
+// revision hid them on focused flows, but the result read as "broken
+// page" — the user correctly flagged the continuity break. The
+// HideOnRoute helper in components/hide-on-route.tsx is kept for future
+// focused flows (e.g. the real payment flow when we build it) but isn't
+// wired in here by default.
 
 // Closest free analog to Roobert (the Clay typeface, not licensable for free use).
 // When a Roobert license is secured, swap this block for next/font/local without
@@ -57,13 +57,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     >
       <html lang="en" className={`${display.variable} ${mono.variable} ${_geistMono.variable}`}>
         <body className="flex min-h-screen flex-col bg-background font-sans text-foreground antialiased">
-          <HideOnRoute paths={CHROMELESS_ROUTES}>
-            <SiteHeader />
-          </HideOnRoute>
+          <SiteHeader />
           <main className="flex-1">{children}</main>
-          <HideOnRoute paths={CHROMELESS_ROUTES}>
-            <SiteFooter />
-          </HideOnRoute>
+          <SiteFooter />
         </body>
       </html>
     </ClerkProvider>

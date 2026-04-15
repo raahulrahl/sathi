@@ -38,7 +38,8 @@ export default async function OnboardingPage() {
   const { data: profile } = await supabase
     .from('profiles')
     .select(
-      `id, role, display_name, full_name, bio, languages, primary_language, whatsapp_number,
+      `id, role, display_name, bio, languages, primary_language,
+       whatsapp_number, whatsapp_validated_at,
        linkedin_url, facebook_url, twitter_url, instagram_url`,
     )
     .eq('id', userId)
@@ -77,6 +78,7 @@ export default async function OnboardingPage() {
             role: (profile?.role as 'family' | 'companion' | null) ?? null,
             languages: profile?.languages ?? [],
             whatsappNumber: profile?.whatsapp_number ?? '',
+            whatsappValidatedAt: profile?.whatsapp_validated_at ?? null,
             bio: profile?.bio ?? '',
             linkedinUrl: profile?.linkedin_url ?? '',
             facebookUrl: profile?.facebook_url ?? '',
