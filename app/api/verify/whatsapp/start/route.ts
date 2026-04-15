@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    await startWhatsAppVerification(parsed.data.phone);
+    await startWhatsAppVerification(userId, parsed.data.phone);
     return NextResponse.json({ ok: true });
   } catch (e) {
     const message = e instanceof Error ? e.message : 'Failed to start verification';

@@ -12,18 +12,23 @@
  * across multiple phone numbers).
  *
  * Responses:
- *   200 { ok: true }                — code matched, profile stamped
+ *   200 { ok: true }                 — code matched, profile stamped
  *   400 { ok: false, error: string } — bad input OR wrong code OR expired code
  *   401 { ok: false, error: string } — not signed in
  *   429 { ok: false, error: string } — rate limited
- *   500 { ok: false, error: string } — DB write failed
+ *
+ * The profile write (stamping whatsapp_number + whatsapp_validated_at)
+ * happens inside checkWhatsAppVerification() on success — same update
+ * that blanks the OTP columns. If it fails, the lib surfaces it as a
+ * thrown error, which the .catch() below turns into a non-match. We
+ * treat DB failure == verification failure so a flaky Supabase doesn't
+ * stamp a half-verified profile.
  */
 
 import { auth } from '@clerk/nextjs/server';
 import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
 import { checkRateLimit, clientIp } from '@/lib/rate-limit';
-import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { isPlausibleE164 } from '@/lib/verify';
 import { checkWhatsAppVerification } from '@/lib/whatsapp-auth';
 
@@ -33,7 +38,6 @@ const Body = z.object({
 });
 
 export async function POST(request: NextRequest) {
-  const supabase = await createSupabaseServerClient();
   const { userId } = await auth();
   if (!userId) {
     return NextResponse.json({ ok: false, error: 'Not signed in' }, { status: 401 });
@@ -67,28 +71,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: false, error: 'Invalid phone or code' }, { status: 400 });
   }
 
-  const approved = await checkWhatsAppVerification(parsed.data.phone, parsed.data.code).catch(
-    () => false,
-  );
+  // lib stamps whatsapp_number + whatsapp_validated_at atomically on success
+  // (single update, same row, same transaction) — no follow-up write here.
+  const approved = await checkWhatsAppVerification(
+    userId,
+    parsed.data.phone,
+    parsed.data.code,
+  ).catch(() => false);
   if (!approved) {
     return NextResponse.json({ ok: false, error: 'Code did not match' }, { status: 400 });
-  }
-
-  // Record the successful verification directly on the profile. We keep
-  // both the validated number and the timestamp — the number can be
-  // different from whatsapp_number on the profile if the user re-verified
-  // a new one without having saved it yet. The save flow reads
-  // whatsapp_validated_at at render time to show the "verified" badge.
-  const { error } = await supabase
-    .from('profiles')
-    .update({
-      whatsapp_number: parsed.data.phone,
-      whatsapp_validated_at: new Date().toISOString(),
-    })
-    .eq('id', userId);
-
-  if (error) {
-    return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
   }
   return NextResponse.json({ ok: true });
 }
