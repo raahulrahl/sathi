@@ -125,24 +125,43 @@
 }
 
 @layer components {
-  /* The Clay signature hover: rotate -8deg, translate up, hard offset shadow.
-     Used via className="clay-hover" on any interactive element that should
-     feel physical and toy-like. Built as a component class rather than a
-     utility so consumers can compose it without re-typing the whole chain. */
+  /* Hover feedback — a very small lift with a soft shadow. Deliberately NOT
+     rotated: the previous -3deg tilt read as "drunk" / slipping on hover
+     and was flagged as a UI bug. This version just does a 1px lift and a
+     subtle shadow so the button still feels responsive without moving the
+     label out from under the cursor. */
   .clay-hover {
     transition:
-      transform 180ms cubic-bezier(0.34, 1.56, 0.64, 1),
-      box-shadow 180ms ease-out,
-      background-color 180ms ease-out,
-      color 180ms ease-out;
+      transform 140ms ease-out,
+      box-shadow 140ms ease-out,
+      background-color 140ms ease-out,
+      color 140ms ease-out;
   }
   .clay-hover:hover {
-    transform: rotateZ(-3deg) translateY(-2px);
-    box-shadow: rgb(0, 0, 0) -4px 4px 0 0;
+    transform: translateY(-1px);
+    box-shadow: rgba(0, 0, 0, 0.1) 0 2px 6px;
   }
   .clay-hover:active {
-    transform: rotateZ(-1deg) translateY(0);
-    box-shadow: rgb(0, 0, 0) -2px 2px 0 0;
+    transform: translateY(0);
+    box-shadow: rgba(0, 0, 0, 0.06) 0 1px 2px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .clay-hover,
+    .clay-hover:hover,
+    .clay-hover:active {
+      transform: none;
+      transition:
+        background-color 140ms ease-out,
+        color 140ms ease-out;
+    }
+    /* Stop the marquee for users who prefer reduced motion. The first copy
+       of the content remains visible statically; the mask gradient still
+       fades the edges, so it reads as a frozen snapshot rather than a live
+       strip. Manual horizontal scroll is available via trackpad/arrow keys
+       since the outer container becomes scrollable when motion stops. */
+    .animate-marquee {
+      animation: none !important;
+    }
   }
 
   /* Dashed border variant — for secondary/decorative containers that shouldn't

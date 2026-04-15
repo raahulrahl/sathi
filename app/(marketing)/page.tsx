@@ -85,33 +85,23 @@ export default async function LandingPage() {
       </section>
 
       {/* ------------------------------------------------------------------
-          NARRATIVE — one centered prose column. This replaces "Three small
-          steps" + "Language first" + "Same plane, not same-ish trip", all
-          of which were SaaS-shaped sections with eyebrow labels and icons.
+          NOTICE CARD — a fixed-width bordered card that replaces the two
+          paragraphs of prose. Previous copy was ~135 words; this is ~40.
+          The example blockquote sits directly below and does the concrete
+          work of showing what a real post looks like.
          ------------------------------------------------------------------ */}
       <section className="container max-w-2xl pb-6 pt-2">
-        <div className="space-y-6 text-lg leading-relaxed text-warm-charcoal">
-          <p>
-            Here&rsquo;s how it works. You post the flight — dates, numbers, the languages she
-            speaks, whatever help she might need. We look at everyone already booked on that same
-            plane, show you the ones who share her language, and rank them by whether their friends
-            have vouched for them. You say hello. You meet at the gate. We never touch the money.
-          </p>
-          <p>
-            Passport checks don&rsquo;t help Ma. A Bengali-speaking student at Schiphol does.
-            That&rsquo;s why we sort by the language your parent actually speaks — not by how
-            polished someone&rsquo;s LinkedIn looks. And we only pair people who are on the exact
-            same flight number, not just the same route. Someone flying{' '}
-            <span className="font-mono text-marigold-700">CCU → AMS</span> on the 10th can&rsquo;t
-            help a parent on the 14th. Two people with{' '}
-            <span className="font-mono font-semibold text-marigold-700">QR540 · QR23</span> are on
-            the same aircraft — that&rsquo;s a real match.
+        <div className="mx-auto max-w-xl rounded-2xl border border-oat bg-white p-6 md:p-8">
+          <p className="text-base leading-relaxed text-warm-charcoal md:text-lg">
+            A <b className="text-foreground">real match</b> is someone on the exact same plane as
+            your parent — same flight number, not just the same route — who actually speaks her
+            language. Thank-yous go between the two of you. We never touch the money.
           </p>
         </div>
 
         {/* One example post. Styled as a note, not a testimonial — no round
             initial avatar, no framed card, no "A note from Priya" eyebrow. */}
-        <figure className="mx-auto mt-10 max-w-xl rounded-2xl border border-marigold-200/80 bg-marigold-50 p-6 md:p-7">
+        <figure className="mx-auto mt-8 max-w-xl rounded-2xl border border-marigold-200/80 bg-marigold-50 p-6 md:p-7">
           <blockquote className="font-display text-lg leading-snug text-foreground md:text-xl">
             &ldquo;Ma flies <span className="font-mono">CCU → AMS via DOH</span> on 14 December. She
             speaks <b className="text-marigold-700">Bengali</b> and a little English. Offering €20
@@ -122,25 +112,52 @@ export default async function LandingPage() {
       </section>
 
       {/* ------------------------------------------------------------------
-          TICKER — a single line of who's around. Replaces the 4-card grid
-          with badges and avatars, which read like a marketplace directory.
+          MARQUEE — ambient left-drift strip showing who's around. No arrows,
+          no clicks, no auto-advance buttons. Hover pauses motion. Content is
+          duplicated so the translateX(-50%) loop is seamless. Respects
+          prefers-reduced-motion via the .clay-hover reset (animate-marquee
+          also stops under that media query — see globals.css).
          ------------------------------------------------------------------ */}
-      <section className="container max-w-3xl py-12 text-center">
-        <p className="text-sm leading-relaxed text-warm-charcoal">
-          Around today: <span className="text-foreground">Arjun (Bengali · Delft)</span>
-          <span className="px-1.5 text-warm-silver">·</span>
-          <span className="text-foreground">Meera (Tamil · Berlin)</span>
-          <span className="px-1.5 text-warm-silver">·</span>
-          <span className="text-foreground">Yusuf (Urdu · Amsterdam)</span>
-          <span className="px-1.5 text-warm-silver">·</span>
-          <span className="text-foreground">Priya (Bengali, Ma&rsquo;s Dec 14 flight)</span>.{' '}
-          <Link href="/search" className="text-marigold-700 underline-offset-4 hover:underline">
-            See everyone →
-          </Link>
-        </p>
-        <p className="mt-2 text-xs text-warm-silver">
-          Examples for now. Real people appear here as they join.
-        </p>
+      <section className="py-12">
+        <div className="container mb-4 text-center">
+          <p className="text-xs font-medium uppercase tracking-[0.12em] text-warm-silver">
+            Around today
+          </p>
+        </div>
+
+        <div
+          className="relative overflow-hidden"
+          style={{
+            maskImage: 'linear-gradient(to right, transparent, black 8%, black 92%, transparent)',
+            WebkitMaskImage:
+              'linear-gradient(to right, transparent, black 8%, black 92%, transparent)',
+          }}
+        >
+          <ul className="flex w-max animate-marquee gap-8 py-2 hover:[animation-play-state:paused] md:gap-10">
+            {[...AROUND_TODAY, ...AROUND_TODAY].map((entry, i) => (
+              <li
+                key={i}
+                className="flex shrink-0 items-center gap-2.5 text-sm leading-none text-warm-charcoal"
+              >
+                <span className={`size-2 shrink-0 rounded-full ${entry.dot}`} aria-hidden />
+                <span className="font-medium text-foreground">{entry.name}</span>
+                <span className="text-warm-silver">·</span>
+                <span>{entry.language}</span>
+                <span className="text-warm-silver">·</span>
+                <span>{entry.location}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div className="container mt-4 text-center">
+          <p className="text-xs text-warm-silver">
+            Examples for now — real people appear here as they join.{' '}
+            <Link href="/search" className="text-marigold-700 underline-offset-4 hover:underline">
+              See everyone →
+            </Link>
+          </p>
+        </div>
       </section>
 
       {/* ------------------------------------------------------------------
@@ -159,3 +176,26 @@ export default async function LandingPage() {
     </div>
   );
 }
+
+/**
+ * Placeholder "around today" roster for the ambient marquee. These are
+ * illustrative — the small caption under the strip calls out that they're
+ * examples. When real users start joining, this array gets replaced by a
+ * live query (probably server-fetched and cached, not client-side, since
+ * the marquee can be stale by minutes without consequence).
+ */
+const AROUND_TODAY: Array<{
+  name: string;
+  language: string;
+  location: string;
+  dot: string;
+}> = [
+  { name: 'Arjun', language: 'Bengali', location: 'Delft', dot: 'bg-matcha-600' },
+  { name: 'Meera', language: 'Tamil', location: 'Berlin', dot: 'bg-ube-800' },
+  { name: 'Yusuf', language: 'Urdu', location: 'Amsterdam', dot: 'bg-lemon-700' },
+  { name: 'Priya', language: 'Bengali', location: 'for Ma · Dec 14', dot: 'bg-pomegranate-400' },
+  { name: 'Ravi', language: 'Telugu', location: 'Singapore', dot: 'bg-slushie-500' },
+  { name: 'Farah', language: 'Arabic', location: 'Dubai', dot: 'bg-matcha-600' },
+  { name: 'Asha', language: 'Gujarati', location: 'Nairobi', dot: 'bg-lemon-700' },
+  { name: 'Lin', language: 'Mandarin', location: 'Bangkok', dot: 'bg-ube-800' },
+];

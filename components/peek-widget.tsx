@@ -30,7 +30,7 @@ import { format } from 'date-fns';
 import { ArrowRight, Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { isValidIata } from '@/lib/iata';
+import { isValidIata, searchAirports } from '@/lib/iata';
 import { cn } from '@/lib/utils';
 
 type Result =
@@ -145,34 +145,14 @@ export function PeekWidget({ className }: { className?: string }) {
         className="rounded-2xl border border-dashed border-oat bg-white/60 p-5 md:p-6"
       >
         <div className="grid gap-3 md:grid-cols-[1fr_1fr_180px_auto]">
-          <div className="space-y-1.5">
-            <Label htmlFor="peek-from" className="text-xs font-medium text-warm-charcoal">
-              From
-            </Label>
-            <Input
-              id="peek-from"
-              value={from}
-              onChange={(e) => setFrom(e.target.value.toUpperCase().slice(0, 3))}
-              placeholder="CCU"
-              maxLength={3}
-              autoComplete="off"
-              className="font-mono uppercase tracking-wider"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="peek-to" className="text-xs font-medium text-warm-charcoal">
-              To
-            </Label>
-            <Input
-              id="peek-to"
-              value={to}
-              onChange={(e) => setTo(e.target.value.toUpperCase().slice(0, 3))}
-              placeholder="AMS"
-              maxLength={3}
-              autoComplete="off"
-              className="font-mono uppercase tracking-wider"
-            />
-          </div>
+          <AirportField
+            id="peek-from"
+            label="From"
+            value={from}
+            onChange={setFrom}
+            placeholder="CCU"
+          />
+          <AirportField id="peek-to" label="To" value={to} onChange={setTo} placeholder="AMS" />
           <div className="space-y-1.5">
             <Label htmlFor="peek-date" className="text-xs font-medium text-warm-charcoal">
               Around
@@ -234,6 +214,79 @@ export function PeekWidget({ className }: { className?: string }) {
           </span>
         )}
       </div>
+    </div>
+  );
+}
+
+/**
+ * Inline airport field with IATA autocomplete. Mirrors the behaviour of
+ * RouteDot in the main composer (same searchAirports() source) but with a
+ * plainer visual — just the label + input + dropdown, no colored dot, no
+ * dashed-line connectors. The peek widget was shipping a bare <Input> with
+ * no suggestions, which made "was I supposed to memorise IATA codes?" a
+ * real question. Now users can type "ams" or "amsterdam" and pick.
+ *
+ * onMouseDown (not onClick) writes the value before the field's onBlur
+ * closes the list — with plain onClick the blur fires first and the click
+ * lands on nothing.
+ */
+function AirportField({
+  id,
+  label,
+  value,
+  onChange,
+  placeholder,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder: string;
+}) {
+  const [focused, setFocused] = useState(false);
+  const suggestions = focused && value.length >= 1 ? searchAirports(value) : [];
+
+  return (
+    <div className="relative space-y-1.5">
+      <Label htmlFor={id} className="text-xs font-medium text-warm-charcoal">
+        {label}
+      </Label>
+      <Input
+        id={id}
+        value={value}
+        onChange={(e) => onChange(e.target.value.toUpperCase().slice(0, 3))}
+        placeholder={placeholder}
+        maxLength={3}
+        autoComplete="off"
+        className="font-mono uppercase tracking-wider"
+        onFocus={() => setFocused(true)}
+        onBlur={() => setTimeout(() => setFocused(false), 150)}
+      />
+      {suggestions.length > 0 ? (
+        <ul
+          role="listbox"
+          className="absolute left-0 right-0 top-full z-30 mt-1 max-h-64 min-w-[220px] overflow-auto rounded-lg border border-oat bg-popover py-1 shadow-lg"
+        >
+          {suggestions.map((a) => (
+            <li key={a.iata}>
+              <button
+                type="button"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  onChange(a.iata);
+                  setFocused(false);
+                }}
+                className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm hover:bg-oat-light"
+              >
+                <span className="font-mono font-semibold">{a.iata}</span>
+                <span className="truncate text-warm-charcoal">
+                  {a.city} · {a.country}
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
     </div>
   );
 }
