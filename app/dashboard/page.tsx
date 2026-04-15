@@ -18,11 +18,20 @@ export const metadata: Metadata = { title: 'Dashboard' };
 // My trips / incoming requests / outgoing requests / active matches.
 export const dynamic = 'force-dynamic';
 
-export default async function DashboardPage() {
+interface DashboardPageProps {
+  searchParams: Promise<{ welcome?: string }>;
+}
+
+export default async function DashboardPage({ searchParams }: DashboardPageProps) {
   const supabase = await createSupabaseServerClient();
   const { userId } = await auth();
   if (!userId) redirect('/auth/sign-in?next=/dashboard');
   const uid = userId;
+  const { welcome } = await searchParams;
+  // Show the "profile saved" banner on first dashboard arrival from the
+  // onboarding redirect. Drops out after the user navigates anywhere else
+  // (they won't come back with ?welcome=1).
+  const showWelcomeBanner = welcome === '1';
 
   const [myTrips, incoming, outgoing, matches] = await Promise.all([
     supabase
@@ -61,6 +70,22 @@ export default async function DashboardPage() {
 
   return (
     <div className="container max-w-5xl py-10">
+      {showWelcomeBanner ? (
+        <div className="mb-6 flex items-start gap-3 rounded-2xl border border-matcha-300/60 bg-matcha-300/20 p-4">
+          <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-matcha-600 text-background">
+            ✓
+          </div>
+          <div className="space-y-1">
+            <p className="font-display text-base font-semibold text-foreground">
+              Profile saved — welcome to Saathi.
+            </p>
+            <p className="text-sm text-warm-charcoal">
+              Post a request if you&rsquo;re sending a parent, or an offer if you&rsquo;re flying a
+              route and open to helping. You can edit your profile from the button up here.
+            </p>
+          </div>
+        </div>
+      ) : null}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="font-serif text-3xl">Dashboard</h1>
         <div className="flex flex-wrap gap-2">

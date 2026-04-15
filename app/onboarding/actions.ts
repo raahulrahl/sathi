@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache';
 import { parsePhoneNumberFromString } from 'libphonenumber-js';
 import { z } from 'zod';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { lookupPhoneNumber } from '@/lib/verify';
 
 /**
  * Simplified onboarding write. Single form — role, name, languages,
@@ -78,13 +79,27 @@ export async function saveOnboardingProfile(
     return { ok: false, error: parsed.error.issues[0]?.message ?? 'Invalid input.' };
   }
 
-  // Store the phone in a normalised international format (E.164 without
-  // spaces) so downstream systems always see the same shape regardless
-  // of how the user typed it.
+  // Start with a local libphonenumber-js normalise to E.164, then hand
+  // off to Twilio Lookup for an actual assigned-carrier check. Lookup
+  // fails open if Twilio isn't configured (local dev, preview without
+  // secrets) — we don't block signups on a third-party we haven't wired.
   const phone = parsePhoneNumberFromString(parsed.data.whatsappNumber);
   const normalisedPhone = phone?.number ?? parsed.data.whatsappNumber;
 
+  const lookup = await lookupPhoneNumber(normalisedPhone);
+  if (lookup.valid === false) {
+    return { ok: false, error: lookup.error };
+  }
+  // lookup.valid === null = Twilio not configured OR Twilio had an
+  // operational error. In both cases we accept the number based on the
+  // libphonenumber-js check we already ran. lookup.valid === true = good.
+
   const supabase = await createSupabaseServerClient();
+
+  // Prefer Twilio's canonical E.164 when Lookup verified the number
+  // (handles e.g. stripped leading zeros in national format), otherwise
+  // use libphonenumber-js's normalisation.
+  const finalPhone = lookup.valid === true ? lookup.e164 : normalisedPhone;
 
   const { error } = await supabase
     .from('profiles')
@@ -93,7 +108,7 @@ export async function saveOnboardingProfile(
       role: parsed.data.role,
       primary_language: parsed.data.primaryLanguage,
       languages: parsed.data.languages,
-      whatsapp_number: normalisedPhone,
+      whatsapp_number: finalPhone,
       bio: parsed.data.bio,
       linkedin_url: parsed.data.linkedinUrl,
       facebook_url: parsed.data.facebookUrl,
