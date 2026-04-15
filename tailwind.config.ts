@@ -122,9 +122,9 @@ const config: Config = {
         pill: '1584px',
       },
       fontFamily: {
-        sans: ['var(--font-sans)', 'Geist', 'system-ui', 'sans-serif'],
+        sans: ['var(--font-sans)', 'Space Grotesk', 'system-ui', 'sans-serif'],
         mono: ['var(--font-mono)', 'Space Mono', 'ui-monospace', 'monospace'],
-        display: ['var(--font-sans)', 'Geist', 'system-ui', 'sans-serif'],
+        display: ['var(--font-sans)', 'Space Grotesk', 'system-ui', 'sans-serif'],
       },
       fontSize: {
         // Clay type scale overrides — see design system §3.

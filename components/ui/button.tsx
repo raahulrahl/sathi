@@ -28,6 +28,8 @@ const buttonVariants = cva(
         matcha: 'rounded-full bg-matcha-600 text-white hover:bg-matcha-800',
         ube: 'rounded-full bg-ube-800 text-white hover:bg-ube-900',
         lemon: 'rounded-full bg-lemon-500 text-foreground hover:bg-lemon-700 hover:text-white',
+        slushie:
+          'rounded-full bg-slushie-500 text-foreground hover:bg-slushie-800 hover:text-white',
         pomegranate:
           'rounded-full bg-pomegranate-400 text-foreground hover:bg-pomegranate-600 hover:text-white',
         white: 'rounded-full bg-white text-foreground border border-oat hover:bg-oat-light',

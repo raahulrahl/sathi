@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { Geist, Space_Mono } from 'next/font/google';
+import { Space_Grotesk, Space_Mono } from 'next/font/google';
 import Script from 'next/script';
 import { ClerkProvider } from '@clerk/nextjs';
 import { Analytics } from '@vercel/analytics/next';
@@ -22,10 +22,18 @@ import './globals.css';
 // focused flows (e.g. the real payment flow when we build it) but isn't
 // wired in here by default.
 
-// Closest free analog to Roobert (the Clay typeface, not licensable for free use).
-// When a Roobert license is secured, swap this block for next/font/local without
-// touching anywhere else — CSS variables stay the same.
-const display = Geist({ subsets: ['latin'], variable: '--font-sans', display: 'swap' });
+// Space Grotesk — a modern grotesque from Florian Karsten, based on Space Mono.
+// Free for commercial use via Google Fonts. Closest free analog to Tomato
+// Grotesk / Roobert: similar proportions, geometric construction, and
+// accentuated contrast. When a paid display face is licensed, swap this
+// block for next/font/local — the `--font-sans` CSS variable keeps
+// everything downstream working untouched.
+const display = Space_Grotesk({
+  subsets: ['latin'],
+  variable: '--font-sans',
+  display: 'swap',
+  weight: ['400', '500', '600', '700'],
+});
 const mono = Space_Mono({
   subsets: ['latin'],
   variable: '--font-mono',

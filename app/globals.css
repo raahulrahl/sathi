@@ -82,7 +82,8 @@
   html {
     /* OpenType stylistic sets on everything — the quiet signature. The font
        may not implement every set, but browsers ignore unrecognised features
-       gracefully, so this stays future-proof for when Roobert replaces Geist. */
+       gracefully, so this stays future-proof when Space Grotesk is replaced
+       by a paid display face later. */
     font-feature-settings:
       'ss01' on,
       'ss03' on,
