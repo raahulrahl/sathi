@@ -1,25 +1,48 @@
 'use client';
 
-import { useState, useTransition } from 'react';
-import { ArrowRight, Plus, X } from 'lucide-react';
+import { Fragment, useEffect, useMemo, useRef, useState, useTransition } from 'react';
+import { Check, Loader2, Plus, Send, X } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { LanguageMultiSelect } from '@/components/language-multi-select';
 import { HELP_CATEGORIES, LANGUAGES } from '@/lib/languages';
-import { isValidIata } from '@/lib/iata';
+import { AIRPORTS, isValidIata } from '@/lib/iata';
 import { createTripAction, type TripInput } from './actions';
+
+export interface FlightLookupResult {
+  flightNumber: string;
+  airline: string;
+  airlineIata: string;
+  from: { iata: string; airport: string; timezone: string };
+  to: { iata: string; airport: string; timezone: string };
+  departure: string;
+  arrival: string;
+  duration: string;
+}
 
 interface PostWizardProps {
   kind: 'request' | 'offer';
   profileLanguages: string[];
-  defaults?: Partial<TripInput>;
+  defaults?: Partial<TripInput> | undefined;
+  /** Called whenever the route array changes — used to update the globe. */
+  onRouteChange?: ((route: string[]) => void) | undefined;
+  /** Called when a flight number resolves — parent uses it to render timeline. */
+  onFlightLookup?: ((legIndex: number, detail: FlightLookupResult) => void) | undefined;
 }
 
-export function PostWizard({ kind, profileLanguages, defaults }: PostWizardProps) {
+// IATA → city lookup for the journey chips
+const CITY_BY_IATA = new Map(AIRPORTS.map((a) => [a.iata, a.city]));
+
+export function PostWizard({
+  kind,
+  profileLanguages,
+  defaults,
+  onRouteChange,
+  onFlightLookup,
+}: PostWizardProps) {
   const [state, setState] = useState<TripInput>({
     kind,
     route: defaults?.route ?? [defaults?.route?.[0] ?? '', defaults?.route?.[1] ?? ''],
@@ -38,6 +61,75 @@ export function PostWizard({ kind, profileLanguages, defaults }: PostWizardProps
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
 
+  // Per-leg lookup status
+  type LookupStatus = 'idle' | 'loading' | 'found' | 'not-found';
+  const [lookupStatus, setLookupStatus] = useState<Record<number, LookupStatus>>({});
+  const [lookupError, setLookupError] = useState<Record<number, string>>({});
+  const lookedUp = useRef<Map<number, string>>(new Map());
+
+  /**
+   * Look up a flight number and fill the route + airline fields.
+   * All setState calls below use the functional form so they compose
+   * safely with concurrent input-change updates (prevents state loss).
+   */
+  async function lookupFlight(legIndex: number) {
+    const flightNumber = state.flight_numbers[legIndex]?.trim();
+    if (!flightNumber || flightNumber.length < 3) return;
+    if (lookedUp.current.get(legIndex) === flightNumber) return;
+
+    const date = state.travel_date || new Date().toISOString().slice(0, 10);
+
+    setLookupStatus((s) => ({ ...s, [legIndex]: 'loading' }));
+    setLookupError((s) => {
+      const { [legIndex]: _omit, ...rest } = s;
+      return rest;
+    });
+
+    try {
+      const res = await fetch('/api/flights/lookup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ flightNumber, date }),
+      });
+      const data = await res.json();
+
+      if (!data.success || !data.flight) {
+        setLookupStatus((s) => ({ ...s, [legIndex]: 'not-found' }));
+        setLookupError((s) => ({
+          ...s,
+          [legIndex]: data.error ?? `Couldn't find ${flightNumber}.`,
+        }));
+        return;
+      }
+
+      lookedUp.current.set(legIndex, flightNumber);
+      onFlightLookup?.(legIndex, data.flight as FlightLookupResult);
+
+      setState((prev) => {
+        const nextRoute = [...prev.route];
+        if (!nextRoute[legIndex]) nextRoute[legIndex] = data.flight.from.iata;
+        if (!nextRoute[legIndex + 1]) nextRoute[legIndex + 1] = data.flight.to.iata;
+        return {
+          ...prev,
+          route: nextRoute,
+          airline: prev.airline || data.flight.airline,
+        };
+      });
+      setLookupStatus((s) => ({ ...s, [legIndex]: 'found' }));
+    } catch (err) {
+      console.error('[flight-lookup] network error:', err);
+      setLookupStatus((s) => ({ ...s, [legIndex]: 'not-found' }));
+      setLookupError((s) => ({ ...s, [legIndex]: 'Network error — please try again.' }));
+    }
+  }
+
+  // Notify parent whenever the route changes — drives the globe.
+  const routeKey = state.route.join(',');
+  useEffect(() => {
+    onRouteChange?.(state.route);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [routeKey]);
+
   function setRouteAt(i: number, v: string) {
     setState((s) => {
       const next = [...s.route];
@@ -45,17 +137,18 @@ export function PostWizard({ kind, profileLanguages, defaults }: PostWizardProps
       return { ...s, route: next };
     });
   }
-  function addLayover() {
-    setState((s) => ({
-      ...s,
-      route: [...s.route.slice(0, -1), '', s.route[s.route.length - 1] ?? ''],
-    }));
+  /** Insert an empty layover at the given route index (0-based). */
+  function insertLayoverAt(index: number) {
+    setState((s) => {
+      const next = [...s.route];
+      next.splice(index, 0, '');
+      return { ...s, route: next };
+    });
   }
   function removeLeg(i: number) {
     setState((s) => {
       if (s.route.length <= 2) return s;
-      const next = s.route.filter((_, idx) => idx !== i);
-      return { ...s, route: next };
+      return { ...s, route: s.route.filter((_, idx) => idx !== i) };
     });
   }
 
@@ -90,114 +183,207 @@ export function PostWizard({ kind, profileLanguages, defaults }: PostWizardProps
   }
 
   const isRequest = kind === 'request';
+  const legCount = state.route.length - 1;
+
+  const routeRoleLabel = useMemo(
+    () => (i: number, total: number) => {
+      if (i === 0) return 'From';
+      if (i === total - 1) return 'To';
+      return 'Via';
+    },
+    [],
+  );
 
   return (
     <form onSubmit={onSubmit} className="space-y-8">
       {error ? (
         <Alert variant="destructive">
-          <AlertTitle>We couldn't post this trip</AlertTitle>
+          <AlertTitle>We couldn&rsquo;t post this trip</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       ) : null}
 
-      <section className="space-y-4">
-        <h2 className="font-serif text-xl">Route</h2>
-        <p className="text-sm text-muted-foreground">
-          Two airports minimum. Add a layover if the connection is where help is needed.
-        </p>
-        <ol className="space-y-2">
-          {state.route.map((code, i) => (
-            <li key={i} className="flex items-center gap-2">
-              <span className="w-6 text-xs text-muted-foreground">
-                {i === 0 ? 'From' : i === state.route.length - 1 ? 'To' : 'Via'}
-              </span>
-              <Input
-                value={code}
-                onChange={(e) => setRouteAt(i, e.target.value)}
-                className="w-28 font-mono uppercase tracking-wider"
-                maxLength={3}
-                placeholder="CCU"
-                required
-              />
-              {state.route.length > 2 && i !== 0 && i !== state.route.length - 1 ? (
-                <Button type="button" size="icon" variant="ghost" onClick={() => removeLeg(i)}>
-                  <X className="size-4" />
-                </Button>
-              ) : null}
-              {i < state.route.length - 1 ? (
-                <ArrowRight className="size-4 text-muted-foreground" aria-hidden />
-              ) : null}
-            </li>
-          ))}
-        </ol>
-        <Button type="button" variant="ghost" size="sm" onClick={addLayover}>
-          <Plus className="mr-1 size-4" /> Add a layover
-        </Button>
+      {/* ─── 1. Compact journey row ─────────────────────────────────────── */}
+      <section className="space-y-2">
+        <div>
+          <h2 className="font-serif text-lg">Your flight path</h2>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            Tap the{' '}
+            <span className="inline-flex size-4 items-center justify-center rounded-full border border-oat bg-background align-middle">
+              <Plus className="size-2.5" />
+            </span>{' '}
+            between airports to add a layover.
+          </p>
+        </div>
+
+        <div className="flex flex-wrap items-end justify-center gap-x-1 gap-y-6 rounded-xl border border-oat bg-cream/60 p-4 sm:justify-start">
+          {state.route.map((code, i) => {
+            const city = code.length === 3 ? CITY_BY_IATA.get(code) : null;
+            const role = routeRoleLabel(i, state.route.length);
+            const isLayover = role === 'Via';
+
+            return (
+              <Fragment key={i}>
+                {/* Airport chip: role tag → IATA input → city name */}
+                <div className="relative flex flex-col items-center gap-1">
+                  <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                    {role}
+                  </span>
+                  <Input
+                    value={code}
+                    onChange={(e) => setRouteAt(i, e.target.value)}
+                    className="h-11 w-20 rounded-lg border-oat-dark bg-background text-center font-mono text-lg font-bold uppercase tracking-wider focus-visible:ring-matcha-600"
+                    maxLength={3}
+                    placeholder="—"
+                    required
+                  />
+                  <span className="min-h-[1rem] max-w-[6rem] truncate text-[11px] text-muted-foreground">
+                    {city ?? '\u00A0'}
+                  </span>
+                  {isLayover && (
+                    <button
+                      type="button"
+                      onClick={() => removeLeg(i)}
+                      aria-label="Remove layover"
+                      className="absolute -right-2 -top-1 rounded-full bg-background p-0.5 text-muted-foreground ring-1 ring-oat hover:text-destructive"
+                    >
+                      <X className="size-3" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Connector: click "+" to insert a layover between these two airports */}
+                {i < state.route.length - 1 && (
+                  <div className="group relative flex items-center gap-0.5 pb-6">
+                    <div className="h-px w-4 bg-oat-dark sm:w-6" />
+                    <button
+                      type="button"
+                      onClick={() => insertLayoverAt(i + 1)}
+                      aria-label="Add layover here"
+                      title="Add layover here"
+                      className="flex size-7 items-center justify-center rounded-full border border-oat bg-background text-muted-foreground transition-all hover:scale-110 hover:border-matcha-600 hover:bg-matcha-300/20 hover:text-matcha-800 hover:shadow-sm"
+                    >
+                      <Plus className="size-3.5" />
+                    </button>
+                    <div className="h-px w-4 bg-oat-dark sm:w-6" />
+                  </div>
+                )}
+              </Fragment>
+            );
+          })}
+        </div>
       </section>
 
-      <section className="grid gap-4 sm:grid-cols-2">
+      {/* ─── 2. Flight numbers — compact list ───────────────────────────── */}
+      <section className="space-y-2">
+        <div>
+          <h2 className="font-serif text-lg">Flight numbers</h2>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            Type a flight number and we&rsquo;ll auto-fill the airports + airline.
+          </p>
+        </div>
+
         <div className="space-y-1.5">
-          <Label htmlFor="travel_date">Travel date</Label>
+          {state.route.slice(0, -1).map((from, i) => {
+            const to = state.route[i + 1] ?? '';
+            const status = lookupStatus[i] ?? 'idle';
+            return (
+              <div key={i} className="flex flex-wrap items-center gap-3">
+                <span className="w-28 shrink-0 font-mono text-xs text-muted-foreground">
+                  Leg {i + 1}
+                  {from && to ? ` · ${from} → ${to}` : ''}
+                </span>
+                <div className="relative">
+                  <Input
+                    value={state.flight_numbers[i] ?? ''}
+                    onChange={(e) => {
+                      const value = e.target.value.toUpperCase().replace(/\s+/g, '');
+                      setState((prev) => {
+                        const next = [...prev.flight_numbers];
+                        next[i] = value;
+                        return { ...prev, flight_numbers: next };
+                      });
+                      setLookupStatus((s) => ({ ...s, [i]: 'idle' }));
+                    }}
+                    onBlur={() => void lookupFlight(i)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        void lookupFlight(i);
+                      }
+                    }}
+                    placeholder={i === 0 ? 'QR540' : 'QR23'}
+                    maxLength={10}
+                    className="h-9 w-36 pr-8 font-mono uppercase tracking-wide"
+                    autoComplete="off"
+                  />
+                  <div className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2">
+                    {status === 'loading' && (
+                      <Loader2 className="size-4 animate-spin text-muted-foreground" />
+                    )}
+                    {status === 'found' && <Check className="size-4 text-matcha-600" />}
+                  </div>
+                </div>
+                {status === 'not-found' && (
+                  <span className="text-xs text-muted-foreground">
+                    {lookupError[i] ?? `Couldn't find it.`}
+                  </span>
+                )}
+              </div>
+            );
+          })}
+          {legCount === 0 && (
+            <p className="text-xs italic text-muted-foreground">
+              Add a destination to enter a flight number.
+            </p>
+          )}
+        </div>
+      </section>
+
+      {/* ─── 3. Date + Airline ──────────────────────────────────────────── */}
+      <section className="grid gap-3 sm:grid-cols-2">
+        <div className="space-y-1">
+          <Label htmlFor="travel_date" className="text-xs">
+            Travel date
+          </Label>
           <Input
             id="travel_date"
             type="date"
             value={state.travel_date}
-            onChange={(e) => setState({ ...state, travel_date: e.target.value })}
+            onChange={(e) => {
+              const value = e.target.value;
+              setState((prev) => ({ ...prev, travel_date: value }));
+            }}
             required
           />
         </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="airline">Airline (optional)</Label>
+        <div className="space-y-1">
+          <Label htmlFor="airline" className="text-xs">
+            Airline <span className="text-muted-foreground">(optional)</span>
+          </Label>
           <Input
             id="airline"
             value={state.airline ?? ''}
-            onChange={(e) => setState({ ...state, airline: e.target.value })}
+            onChange={(e) => {
+              const value = e.target.value;
+              setState((prev) => ({ ...prev, airline: value }));
+            }}
             placeholder="KLM, Qatar, Emirates…"
           />
         </div>
       </section>
 
-      <section className="space-y-3">
-        <h2 className="font-serif text-xl">Flight numbers</h2>
-        <p className="text-sm text-muted-foreground">
-          <b>Strongly recommended.</b> Matching runs on exact flight number — without them, we can
-          only show people on the same route around the same date, not people on the same plane. One
-          per leg (in order).
-        </p>
-        <div className="space-y-2">
-          {state.route.map((_, i) => (
-            <div key={i} className="flex items-center gap-2">
-              <span className="w-14 text-xs text-muted-foreground">
-                Leg {i + 1}
-                {i < state.route.length - 1 ? ` (${state.route[i]} → ${state.route[i + 1]})` : null}
-              </span>
-              {i < state.route.length - 1 ? (
-                <Input
-                  value={state.flight_numbers[i] ?? ''}
-                  onChange={(e) => {
-                    const next = [...state.flight_numbers];
-                    next[i] = e.target.value.toUpperCase().replace(/\s+/g, '');
-                    setState({ ...state, flight_numbers: next });
-                  }}
-                  placeholder={i === 0 ? 'QR540' : 'QR23'}
-                  maxLength={10}
-                  className="w-32 font-mono uppercase tracking-wide"
-                  autoComplete="off"
-                />
-              ) : null}
-            </div>
-          ))}
+      {/* ─── 4. Languages ───────────────────────────────────────────────── */}
+      <section className="space-y-2">
+        <div>
+          <h2 className="font-serif text-lg">
+            {isRequest ? 'Languages the parent speaks' : 'Languages you speak'}
+          </h2>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            We rank matches by language first. Be honest — only ones you can hold a conversation in.
+          </p>
         </div>
-      </section>
-
-      <section className="space-y-3">
-        <h2 className="font-serif text-xl">
-          {isRequest ? 'Languages the parent speaks' : 'Languages you speak'}
-        </h2>
-        <p className="text-sm text-muted-foreground">
-          We rank matches by language first. Be honest — a mother tongue you can actually hold a
-          conversation in.
-        </p>
         <LanguageMultiSelect
           options={LANGUAGES}
           selected={state.languages}
@@ -206,56 +392,81 @@ export function PostWizard({ kind, profileLanguages, defaults }: PostWizardProps
         />
       </section>
 
-      <section className="space-y-3">
-        <h2 className="font-serif text-xl">Help</h2>
-        <p className="text-sm text-muted-foreground">
-          Categories are hints to companions — picking a few helps people self-select in or out.
-        </p>
-        <div className="grid gap-2 sm:grid-cols-2">
-          {HELP_CATEGORIES.map((h) => (
-            <label key={h.key} className="flex items-start gap-3 rounded-md border p-3 text-sm">
-              <Checkbox
-                checked={state.help_categories.includes(h.key)}
-                onCheckedChange={() => toggleHelp(h.key)}
-                className="mt-0.5"
-              />
-              <div>
-                <div className="font-medium">{h.label}</div>
-                <div className="text-xs text-muted-foreground">{h.description}</div>
-              </div>
-            </label>
-          ))}
+      {/* ─── 5. Help categories ─────────────────────────────────────────── */}
+      <section className="space-y-2">
+        <div className="flex items-end justify-between gap-3">
+          <div>
+            <h2 className="font-serif text-lg">What could you help with?</h2>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Tap any that apply. Hover for a hint.
+            </p>
+          </div>
+          {state.help_categories.length > 0 && (
+            <span className="shrink-0 text-xs text-muted-foreground">
+              {state.help_categories.length}/{HELP_CATEGORIES.length}
+            </span>
+          )}
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          {HELP_CATEGORIES.map((h) => {
+            const checked = state.help_categories.includes(h.key);
+            return (
+              <button
+                key={h.key}
+                type="button"
+                onClick={() => toggleHelp(h.key)}
+                title={h.description}
+                aria-pressed={checked}
+                className={`inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-medium transition-all ${
+                  checked
+                    ? 'border-matcha-600 bg-matcha-600 text-white shadow-sm hover:bg-matcha-800'
+                    : 'border-oat bg-card text-foreground hover:border-matcha-600 hover:bg-matcha-300/10'
+                }`}
+              >
+                {checked && <span>✓</span>}
+                {h.label}
+              </button>
+            );
+          })}
         </div>
       </section>
 
+      {/* ─── 6. Parent details (request flow only) ──────────────────────── */}
       {isRequest ? (
-        <section className="space-y-4">
-          <h2 className="font-serif text-xl">About the parent</h2>
-          <p className="text-sm text-muted-foreground">
-            Only the age band is public. The first name and any medical notes are hidden until a
-            request is accepted.
-          </p>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label htmlFor="elderly_first_name">First name</Label>
+        <section className="space-y-3">
+          <div>
+            <h2 className="font-serif text-lg">About the parent</h2>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Only the age band is public. The first name and medical notes stay private until the
+              request is accepted.
+            </p>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1">
+              <Label htmlFor="elderly_first_name" className="text-xs">
+                First name
+              </Label>
               <Input
                 id="elderly_first_name"
                 value={state.elderly_first_name ?? ''}
-                onChange={(e) => setState({ ...state, elderly_first_name: e.target.value })}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setState((prev) => ({ ...prev, elderly_first_name: value }));
+                }}
                 placeholder="Shanta"
               />
             </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="elderly_age_band">Age band</Label>
+            <div className="space-y-1">
+              <Label htmlFor="elderly_age_band" className="text-xs">
+                Age band
+              </Label>
               <select
                 id="elderly_age_band"
                 value={state.elderly_age_band ?? ''}
-                onChange={(e) =>
-                  setState({
-                    ...state,
-                    elderly_age_band: (e.target.value || null) as TripInput['elderly_age_band'],
-                  })
-                }
+                onChange={(e) => {
+                  const value = (e.target.value || null) as TripInput['elderly_age_band'];
+                  setState((prev) => ({ ...prev, elderly_age_band: value }));
+                }}
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
               >
                 <option value="">Pick a band</option>
@@ -265,66 +476,92 @@ export function PostWizard({ kind, profileLanguages, defaults }: PostWizardProps
               </select>
             </div>
           </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="elderly_medical_notes">Medical notes (private)</Label>
+          <div className="space-y-1">
+            <Label htmlFor="elderly_medical_notes" className="text-xs">
+              Medical notes (private)
+            </Label>
             <Textarea
               id="elderly_medical_notes"
               rows={3}
               value={state.elderly_medical_notes ?? ''}
-              onChange={(e) => setState({ ...state, elderly_medical_notes: e.target.value })}
+              onChange={(e) => {
+                const value = e.target.value;
+                setState((prev) => ({ ...prev, elderly_medical_notes: value }));
+              }}
               placeholder="Diabetic; meds at mealtimes. Walks slowly but doesn't need a wheelchair."
             />
-            <p className="text-xs text-muted-foreground">
-              Shared only with the companion after the request is accepted.
-            </p>
           </div>
         </section>
       ) : null}
 
-      <section className="space-y-4">
-        <h2 className="font-serif text-xl">Details</h2>
+      {/* ─── 7. Notes ───────────────────────────────────────────────────── */}
+      <section className="space-y-2">
+        <div>
+          <h2 className="font-serif text-lg">Anything else?</h2>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            A short note about how you like to help.
+          </p>
+        </div>
         {isRequest ? (
-          <div className="space-y-1.5">
-            <Label htmlFor="thank_you_eur">Thank-you amount (EUR, approximate)</Label>
+          <div className="space-y-1">
+            <Label htmlFor="thank_you_eur" className="text-xs">
+              Thank-you amount (EUR)
+            </Label>
             <Input
               id="thank_you_eur"
               type="number"
               min={0}
               max={500}
               value={state.thank_you_eur ?? ''}
-              onChange={(e) =>
-                setState({
-                  ...state,
-                  thank_you_eur: e.target.value === '' ? null : Number.parseInt(e.target.value, 10),
-                })
-              }
+              onChange={(e) => {
+                const raw = e.target.value;
+                setState((prev) => ({
+                  ...prev,
+                  thank_you_eur: raw === '' ? null : Number.parseInt(raw, 10),
+                }));
+              }}
               placeholder="15"
             />
-            <p className="text-xs text-muted-foreground">
-              Saathi never touches money. This is just the suggested gratitude to settle between
-              you.
+            <p className="text-[11px] text-muted-foreground">
+              Saathi never touches money. Settled directly between you.
             </p>
           </div>
         ) : null}
-        <div className="space-y-1.5">
-          <Label htmlFor="notes">Notes</Label>
-          <Textarea
-            id="notes"
-            rows={4}
-            value={state.notes ?? ''}
-            onChange={(e) => setState({ ...state, notes: e.target.value })}
-            placeholder={
-              isRequest
-                ? 'Ma has done this flight once; the Doha transfer is where she gets confused. Vegetarian.'
-                : 'I arrive at CCU three hours early and can wait with someone at check-in if needed.'
-            }
-          />
-        </div>
+        <Textarea
+          id="notes"
+          rows={3}
+          value={state.notes ?? ''}
+          onChange={(e) => {
+            const value = e.target.value;
+            setState((prev) => ({ ...prev, notes: value }));
+          }}
+          placeholder={
+            isRequest
+              ? 'Ma has done this flight once; the Doha transfer is where she gets confused. Vegetarian.'
+              : 'I arrive at CCU three hours early and can wait with someone at check-in if needed.'
+          }
+        />
       </section>
 
-      <div className="flex justify-end">
-        <Button size="lg" type="submit" disabled={pending}>
-          {pending ? 'Posting…' : isRequest ? 'Post request' : 'Post offer'}
+      {/* ─── Submit ─────────────────────────────────────────────────────── */}
+      <div className="flex flex-col-reverse items-stretch gap-3 border-t border-oat pt-5 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-xs text-muted-foreground">
+          Posting makes your offer visible to families.
+        </p>
+        <Button
+          size="lg"
+          type="submit"
+          disabled={pending}
+          className="gap-2 bg-matcha-600 px-6 text-white hover:bg-matcha-800"
+        >
+          {pending ? (
+            'Posting…'
+          ) : (
+            <>
+              <Send className="size-4" />
+              {isRequest ? 'Post request' : 'Post offer'}
+            </>
+          )}
         </Button>
       </div>
     </form>
