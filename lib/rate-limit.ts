@@ -60,19 +60,31 @@ export interface RateLimitResult {
  * Check + consume one token for `identifier`. The identifier should already
  * encode the scope (e.g. `verify-start:user_123` or `verify-start:ip:1.2.3.4`)
  * so that different routes don't share buckets.
+ *
+ * **Fails open on error.** If Upstash is unreachable, returns auth, times out,
+ * or throws for any reason, we pretend the check passed. A broken rate
+ * limiter must never block users — losing rate protection temporarily is
+ * strictly better than a blank 500 on every authenticated action. The error
+ * is logged so it surfaces in Sentry / server logs for investigation.
  */
 export async function checkRateLimit(identifier: string): Promise<RateLimitResult> {
   const limiter = getLimiter();
   if (!limiter) {
     return { success: true, remaining: Infinity, reset: 0, limit: Infinity };
   }
-  const res = await limiter.limit(identifier);
-  return {
-    success: res.success,
-    remaining: res.remaining,
-    reset: res.reset,
-    limit: res.limit,
-  };
+  try {
+    const res = await limiter.limit(identifier);
+    return {
+      success: res.success,
+      remaining: res.remaining,
+      reset: res.reset,
+      limit: res.limit,
+    };
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('[rate-limit] limiter.limit threw — failing open:', err);
+    return { success: true, remaining: Infinity, reset: 0, limit: Infinity };
+  }
 }
 
 /**
