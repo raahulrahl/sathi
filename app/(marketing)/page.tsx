@@ -39,10 +39,11 @@ export default async function LandingPage() {
         <div className="container flex flex-col items-center gap-10 py-16 md:py-20">
           <div className="flex max-w-3xl flex-col items-center gap-5 text-center">
             <span className="inline-flex items-center gap-2 rounded-full border border-oat bg-white px-3 py-1 text-xs font-medium text-warm-charcoal">
-              साथी · a little community for travel days
+              <span className="font-semibold text-marigold-700">साथी</span> · a little community for
+              travel days
             </span>
             <h1 className="max-w-3xl text-balance font-display text-4xl font-semibold leading-[1.1] tracking-[-0.02em] text-foreground md:text-5xl lg:text-[56px]">
-              Find someone kind on Ma&rsquo;s flight.
+              Find someone kind on <span className="text-marigold-700">Ma&rsquo;s</span> flight.
             </h1>
             <p className="max-w-2xl text-balance text-lg leading-relaxed text-warm-charcoal">
               Saathi is a small community of travellers who look out for each other&rsquo;s parents
@@ -78,19 +79,20 @@ export default async function LandingPage() {
             That&rsquo;s why we sort by the language your parent actually speaks — not by how
             polished someone&rsquo;s LinkedIn looks. And we only pair people who are on the exact
             same flight number, not just the same route. Someone flying{' '}
-            <span className="font-mono">CCU → AMS</span> on the 10th can&rsquo;t help a parent on
-            the 14th. Two people with <span className="font-mono font-semibold">QR540 · QR23</span>{' '}
-            are on the same aircraft — that&rsquo;s a real match.
+            <span className="font-mono text-marigold-700">CCU → AMS</span> on the 10th can&rsquo;t
+            help a parent on the 14th. Two people with{' '}
+            <span className="font-mono font-semibold text-marigold-700">QR540 · QR23</span> are on
+            the same aircraft — that&rsquo;s a real match.
           </p>
         </div>
 
         {/* One example post. Styled as a note, not a testimonial — no round
             initial avatar, no framed card, no "A note from Priya" eyebrow. */}
-        <figure className="mx-auto mt-10 max-w-xl rounded-2xl border border-matcha-300/60 bg-matcha-300/25 p-6 md:p-7">
+        <figure className="mx-auto mt-10 max-w-xl rounded-2xl border border-marigold-200/80 bg-marigold-50 p-6 md:p-7">
           <blockquote className="font-display text-lg leading-snug text-foreground md:text-xl">
             &ldquo;Ma flies <span className="font-mono">CCU → AMS via DOH</span> on 14 December. She
-            speaks <b>Bengali</b> and a little English. Offering €20 for anyone on the same flight
-            who can walk her through the transfer at Doha.&rdquo;
+            speaks <b className="text-marigold-700">Bengali</b> and a little English. Offering €20
+            for anyone on the same flight who can walk her through the transfer at Doha.&rdquo;
           </blockquote>
           <figcaption className="mt-4 text-sm text-warm-charcoal">— Priya, Amsterdam</figcaption>
         </figure>
@@ -109,7 +111,7 @@ export default async function LandingPage() {
           <span className="text-foreground">Yusuf (Urdu · Amsterdam)</span>
           <span className="px-1.5 text-warm-silver">·</span>
           <span className="text-foreground">Priya (Bengali, Ma&rsquo;s Dec 14 flight)</span>.{' '}
-          <Link href="/search" className="underline-offset-4 hover:underline">
+          <Link href="/search" className="text-marigold-700 underline-offset-4 hover:underline">
             See everyone →
           </Link>
         </p>

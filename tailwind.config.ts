@@ -92,10 +92,21 @@ const config: Config = {
         dragonfruit: {
           500: '#e84aa4',
         },
+        // Marigold / haldi — the emotional accent. Used sparingly on 1–2 words
+        // per screen ("Ma's", "साथी", flight numbers). DO NOT use for body text
+        // or UI chrome — it tips into retail-orange fast.
+        marigold: {
+          50: '#fff7ed',
+          200: '#fed7aa',
+          400: '#f59e0b',
+          600: '#d97706', // mid accent
+          700: '#b45309', // text accent — 5.4:1 on cream, AA safe
+          900: '#7c2d12',
+        },
 
         // --- Warm neutrals ---
         'warm-silver': '#9f9b93',
-        'warm-charcoal': '#55534e',
+        'warm-charcoal': '#4a3d32', // warmed from #55534e — slightly brown-toned
       },
       borderRadius: {
         none: '0',

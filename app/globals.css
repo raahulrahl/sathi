@@ -3,19 +3,24 @@
 @tailwind utilities;
 
 /*
- * Clay-inspired design tokens.
+ * Clay-inspired design tokens, warmed up for the people this site is for.
  *   Background:  warm cream #faf9f7 (not cool white — the warmth IS the identity)
- *   Text:        black #000 — strict three-weight system (400/500/600)
+ *   Text:        espresso #2e241c — a warm-toned dark, not pure black. Still
+ *                hits ~13:1 contrast on cream but reads like brown ink on
+ *                ivory paper, not printer toner. This is the whole reason
+ *                the page feels warmer now.
  *   Borders:     warm oat #dad4c8 / #eee9df — never neutral gray
- *   Primary:     black — Clay uses swatch colors for sections, not as brand accent
- *   Swatches:    applied at full-width-section scale (not small accents)
+ *   Primary:     espresso — solid buttons inherit the foreground tone
+ *   Accent:      marigold (#b45309) used sparingly on 1–2 emotional words
+ *                per page. Do NOT use for body text or UI chrome — it reads
+ *                retail/promotional at that density.
  */
 
 @layer base {
   :root {
     /* HSL tuples so Tailwind's hsl(var(--x)) opacity modifier works */
     --background: 40 33% 97%; /* #faf9f7 warm cream */
-    --foreground: 0 0% 0%; /* #000 clay black */
+    --foreground: 27 24% 14%; /* #2e241c espresso — brown ink, not black */
 
     --card: 0 0% 100%; /* #fff pure white cards on cream */
     --card-foreground: 0 0% 0%;
@@ -23,7 +28,7 @@
     --popover: 0 0% 100%;
     --popover-foreground: 0 0% 0%;
 
-    --primary: 0 0% 0%; /* black primary */
+    --primary: 27 24% 14%; /* espresso primary — same as foreground */
     --primary-foreground: 40 33% 97%;
 
     --secondary: 35 28% 90%; /* oat light */
