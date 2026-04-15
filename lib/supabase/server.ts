@@ -4,21 +4,49 @@ import { auth } from '@clerk/nextjs/server';
 /**
  * Server-side Supabase client that trusts Clerk as the auth source.
  *
- * How it works:
- *   1. Clerk signs a JWT using Supabase's JWT secret via a "supabase" JWT
- *      template (created in the Clerk dashboard).
- *   2. We fetch that JWT here via `auth().getToken({ template: 'supabase' })`.
- *   3. We pass it as a Bearer token on every Supabase request.
- *   4. Supabase decodes the claim `sub` as the Clerk user id.
- *   5. Our RLS policies call `public.clerk_user_id()` (from 0005_clerk.sql),
- *      which reads that same `sub` as text — matching `profiles.id`.
+ * Two supported Clerk ↔ Supabase wirings (Supabase has shipped both over
+ * the last year; the right one depends on which one you set up in the
+ * Supabase dashboard):
  *
- * For anonymous viewers (no Clerk session) we fall back to the anon key,
- * which is what the public search / trip / profile pages need.
+ *   A. **Third-Party Auth integration (newer, recommended)**:
+ *      Supabase → Authentication → Third-Party Auth → add Clerk with
+ *      your Clerk issuer URL. Supabase fetches Clerk's JWKS and validates
+ *      incoming JWTs signed by Clerk's RS256 key. No shared secret. Our
+ *      code just forwards `getToken()` (default Clerk session token).
+ *
+ *   B. **"supabase" JWT template (legacy, HS256)**:
+ *      Clerk → JWT Templates → new template named "supabase", signed with
+ *      Supabase's JWT Secret. Our code fetches that template-signed token
+ *      via `getToken({ template: 'supabase' })`.
+ *
+ * We try the named template first, fall back to the default session
+ * token. Whichever Supabase is configured for, one of them will verify.
+ * If both return null, we fall back to the anon key (public views still
+ * work without a session).
+ *
+ * Downstream, regardless of pattern, our RLS policies call
+ * `public.clerk_user_id()` (supabase/migrations/0005_clerk.sql), which
+ * reads the `sub` claim from whichever token got through.
  */
 export async function createSupabaseServerClient() {
   const { getToken } = await auth();
-  const clerkToken = await getToken({ template: 'supabase' }).catch(() => null);
+
+  // Template first (legacy HS256 path). If Clerk doesn't have a "supabase"
+  // template configured, getToken returns null — fine, we try the default.
+  let clerkToken: string | null = null;
+  try {
+    clerkToken = await getToken({ template: 'supabase' });
+  } catch {
+    // template lookup threw — fall through
+  }
+  // Default session token (RS256). Works with Third-Party Auth.
+  if (!clerkToken) {
+    try {
+      clerkToken = await getToken();
+    } catch {
+      // no session, or Clerk unreachable
+    }
+  }
 
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL ?? '',
