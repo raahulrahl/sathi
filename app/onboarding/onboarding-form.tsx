@@ -176,7 +176,7 @@ export function OnboardingForm({ initialValues }: OnboardingFormProps) {
       if (languages.length < 1) return 'Pick at least one language.';
       if (!phoneState.valid) return phoneState.message ?? 'Enter a valid WhatsApp number.';
       if (!whatsappVerified) {
-        return 'Please verify your WhatsApp number via the OTP before continuing.';
+        return 'Please verify your phone number before continuing.';
       }
     } else if (s === 3) {
       if (filledSocialCount < 2) return 'Share at least two social profile links.';
@@ -471,7 +471,7 @@ function Step2({
   whatsappVerified: boolean;
   onVerified: () => void;
 }) {
-  const langLabel = role === 'family' ? 'Your parent’s languages' : 'Languages you can help in';
+  const langLabel = role === 'family' ? "Your parent's languages" : 'Languages you can help in';
 
   return (
     <>
@@ -624,18 +624,17 @@ function Step3({
 }
 
 // -----------------------------------------------------------------------------
-// WhatsApp OTP verification — inline Twilio Verify flow
+// Phone OTP verification — WhatsApp primary, SMS fallback
 // -----------------------------------------------------------------------------
 /**
- * Three-state inline widget:
- *   idle     → "Verify via WhatsApp" button
- *   sent     → code input + "Check" button (+ "Resend")
- *   verified → matcha-coloured badge, "Re-verify" option
+ * Inline widget supporting two delivery channels:
+ *   idle     → "Verify via WhatsApp" + "Verify via SMS" options
+ *   sent     → code input, channel label, resend + switch-channel links
+ *   verified → green badge, "Re-verify" option
  *
- * Uses the existing /api/verify/whatsapp/start + /check endpoints. On
- * successful /check the server stamps whatsapp_validated_at on the
- * profile; here we also call onVerified() so the parent form knows to
- * show the verified badge without a full reload.
+ * Both channels share the same OTP hash columns on the profile row, so only
+ * one pending code exists at a time. On success the server stamps
+ * whatsapp_validated_at regardless of which channel delivered the code.
  */
 function WhatsAppOtpVerify({
   phone,
@@ -646,6 +645,7 @@ function WhatsAppOtpVerify({
   verified: boolean;
   onVerified: () => void;
 }) {
+  const [channel, setChannel] = useState<'whatsapp' | 'sms'>('whatsapp');
   const [phase, setPhase] = useState<'idle' | 'sent' | 'checking'>('idle');
   const [code, setCode] = useState('');
   const [message, setMessage] = useState<string | null>(null);
@@ -656,7 +656,7 @@ function WhatsAppOtpVerify({
       <div className="flex items-center justify-between rounded-md border border-matcha-300/60 bg-matcha-300/20 px-3 py-2 text-xs text-matcha-800">
         <span className="flex items-center gap-1.5">
           <CheckCircle2 className="size-3.5" aria-hidden />
-          WhatsApp verified.
+          Phone verified.
         </span>
         <button
           type="button"
@@ -669,11 +669,13 @@ function WhatsAppOtpVerify({
     );
   }
 
-  async function sendCode() {
+  async function sendCode(ch: 'whatsapp' | 'sms') {
     setMessage(null);
+    setChannel(ch);
+    const url = ch === 'whatsapp' ? '/api/verify/whatsapp/start' : '/api/verify/sms/start';
     start(async () => {
       try {
-        const res = await fetch('/api/verify/whatsapp/start', {
+        const res = await fetch(url, {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
           body: JSON.stringify({ phone }),
@@ -693,9 +695,10 @@ function WhatsAppOtpVerify({
   async function checkCode() {
     setMessage(null);
     setPhase('checking');
+    const url = channel === 'whatsapp' ? '/api/verify/whatsapp/check' : '/api/verify/sms/check';
     start(async () => {
       try {
-        const res = await fetch('/api/verify/whatsapp/check', {
+        const res = await fetch(url, {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
           body: JSON.stringify({ phone, code }),
@@ -707,7 +710,7 @@ function WhatsAppOtpVerify({
           setCode('');
           return;
         }
-        setMessage(json.error ?? 'That code didn’t match.');
+        setMessage(json.error ?? 'That code didn\u2019t match.');
         setPhase('sent');
       } catch (err) {
         setMessage(err instanceof Error ? err.message : 'Check failed.');
@@ -718,20 +721,35 @@ function WhatsAppOtpVerify({
 
   if (phase === 'idle') {
     return (
-      <div className="space-y-1.5">
+      <div className="space-y-2">
         <Button
           type="button"
           variant="outline"
           size="sm"
-          onClick={sendCode}
+          onClick={() => sendCode('whatsapp')}
           disabled={pending || !phone}
           className="w-full"
         >
-          {pending ? 'Sending…' : 'Verify this number via WhatsApp'}
+          {pending && channel === 'whatsapp' ? 'Sending…' : 'Verify via WhatsApp'}
+        </Button>
+        <div className="flex items-center gap-2">
+          <div className="h-px flex-1 bg-oat" />
+          <span className="text-xs text-warm-silver">or</span>
+          <div className="h-px flex-1 bg-oat" />
+        </div>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => sendCode('sms')}
+          disabled={pending || !phone}
+          className="w-full text-warm-charcoal"
+        >
+          {pending && channel === 'sms' ? 'Sending…' : 'Verify via SMS'}
         </Button>
         {message ? <p className="text-xs text-pomegranate-600">{message}</p> : null}
         <p className="text-xs text-warm-silver">
-          We&rsquo;ll send a 6-digit code to this number on WhatsApp. Takes a few seconds.
+          We&rsquo;ll send a 6-digit code. Takes a few seconds.
         </p>
       </div>
     );
@@ -740,7 +758,10 @@ function WhatsAppOtpVerify({
   return (
     <div className="space-y-2 rounded-md border border-oat bg-oat-light/40 p-3">
       <p className="text-xs text-warm-charcoal">
-        Code sent to <b>{phone}</b>. Open WhatsApp and paste the 6-digit code here.
+        Code sent to <b>{phone}</b> via {channel === 'whatsapp' ? 'WhatsApp' : 'SMS'}.{' '}
+        {channel === 'whatsapp'
+          ? 'Open WhatsApp and paste the 6-digit code here.'
+          : 'Check your messages for the code.'}
       </p>
       <div className="flex gap-2">
         <Input
@@ -759,15 +780,29 @@ function WhatsAppOtpVerify({
         </Button>
       </div>
       {message ? <p className="text-xs text-pomegranate-600">{message}</p> : null}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
         <button
           type="button"
-          onClick={sendCode}
+          onClick={() => sendCode(channel)}
           disabled={pending}
           className="text-xs text-marigold-700 underline-offset-4 hover:underline disabled:opacity-50"
         >
           Resend code
         </button>
+        {channel === 'whatsapp' && (
+          <button
+            type="button"
+            onClick={() => {
+              setCode('');
+              setMessage(null);
+              sendCode('sms');
+            }}
+            disabled={pending}
+            className="text-xs text-warm-charcoal underline-offset-4 hover:underline disabled:opacity-50"
+          >
+            Try SMS instead
+          </button>
+        )}
         <button
           type="button"
           onClick={() => {
@@ -775,7 +810,7 @@ function WhatsAppOtpVerify({
             setCode('');
             setMessage(null);
           }}
-          className="text-xs text-warm-silver underline-offset-4 hover:underline"
+          className="ml-auto text-xs text-warm-silver underline-offset-4 hover:underline"
         >
           Cancel
         </button>
