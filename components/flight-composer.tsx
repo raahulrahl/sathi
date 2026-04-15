@@ -170,7 +170,7 @@ export function FlightComposer({
     const params = buildParams();
     start(() => {
       if (targetMode === 'seek') {
-        router.push(`/search?${params.toString()}`);
+        router.push(`/browse?${params.toString()}`);
         return;
       }
       // Offer mode — post a new trip. Route to the right variant based on role.
@@ -601,7 +601,7 @@ function LiveCounter({ route, date, flights, enabled }: LiveCounterProps) {
   return (
     <div className="mt-4 flex items-center justify-center">
       <a
-        href={`/search?${params.toString()}`}
+        href={`/browse?${params.toString()}`}
         className="clay-hover inline-flex items-center gap-2 rounded-full bg-oat-light px-4 py-2 text-sm text-foreground"
       >
         <span

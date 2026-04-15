@@ -132,7 +132,7 @@ export function PeekWidget({ className }: { className?: string }) {
       to: result.to,
       date: result.date,
     });
-    return `/search?${params.toString()}`;
+    return `/browse?${params.toString()}`;
   }, [result]);
 
   return (

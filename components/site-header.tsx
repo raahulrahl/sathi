@@ -24,7 +24,7 @@ export async function SiteHeader() {
           <span className="clay-label hidden sm:inline">साथी</span>
         </Link>
         <nav className="hidden items-center gap-8 text-sm md:flex">
-          <Link href="/search" className="font-medium text-warm-charcoal hover:text-foreground">
+          <Link href="/browse" className="font-medium text-warm-charcoal hover:text-foreground">
             Browse
           </Link>
           <Link href="/about" className="font-medium text-warm-charcoal hover:text-foreground">
@@ -37,11 +37,11 @@ export async function SiteHeader() {
         <div className="flex items-center gap-2">
           {signedIn ? (
             <>
-              <Button asChild variant="ghost" size="sm">
-                <Link href="/dashboard">Dashboard</Link>
-              </Button>
+              {/* Dashboard is the single entry point for posting — the
+                  "New offer" and "New request" buttons live there. A third
+                  shortcut up here was clutter once dashboard covered it. */}
               <Button asChild size="sm">
-                <Link href="/post/request">Post a trip</Link>
+                <Link href="/dashboard">Dashboard</Link>
               </Button>
               <UserButton
                 appearance={{
@@ -56,8 +56,11 @@ export async function SiteHeader() {
               <Button asChild variant="ghost" size="sm">
                 <Link href="/auth/sign-in">Sign in</Link>
               </Button>
+              {/* Signed-out visitors can't reach /dashboard, so the post
+                  CTA stays here as a conversion path. Sends them through
+                  sign-in and lands them on the request flow after. */}
               <Button asChild size="sm">
-                <Link href="/auth/sign-in?redirect_url=/post/request">Post a trip</Link>
+                <Link href="/auth/sign-in?redirect_url=/dashboard/new/request">Post a trip</Link>
               </Button>
             </>
           )}

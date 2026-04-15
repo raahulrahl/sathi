@@ -4,15 +4,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { format, parseISO } from 'date-fns';
-import {
-  ArrowRight,
-  Calendar,
-  ChevronRight,
-  Info,
-  MapPin,
-  ShieldAlert,
-  Sparkles,
-} from 'lucide-react';
+import { ArrowRight, Calendar, ChevronRight, Info, MapPin, ShieldAlert } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -100,11 +92,16 @@ export default async function TripPage({ params, searchParams }: TripPageProps) 
 
   // Show the share prompt if this is the first landing after creation
   const showShareBanner = isOwner && isNewTrip === 'true';
+  // Canonical public URL for this trip — passed down so the share buttons
+  // always link to the production origin even when the dev is on localhost.
+  // Facebook/WhatsApp crawlers can't reach localhost, so without this the
+  // preview never loads.
+  const pageUrl = `${SITE_URL}/trip/${id}`;
 
   return (
     <div className="container max-w-4xl py-8">
       <nav className="mb-4 flex items-center gap-1 text-xs text-muted-foreground">
-        <Link href="/search" className="hover:text-foreground">
+        <Link href="/browse" className="hover:text-foreground">
           Browse
         </Link>
         <ChevronRight className="size-3" />
@@ -113,24 +110,36 @@ export default async function TripPage({ params, searchParams }: TripPageProps) 
         </span>
       </nav>
 
-      {/* Post-creation share banner */}
+      {/* Post-creation share banner — warm, human, not transactional */}
       {showShareBanner && (
         <div className="mb-6 rounded-2xl border border-matcha-600/20 bg-matcha-600/5 p-5">
-          <div className="mb-3 flex items-center gap-2">
-            <Sparkles className="size-5 text-matcha-600" />
-            <p className="font-semibold text-matcha-600">Your offer is live!</p>
+          <div className="mb-2 flex items-center gap-2">
+            <span className="text-xl" aria-hidden>
+              🌼
+            </span>
+            <p className="font-semibold text-matcha-800">
+              {isRequest ? 'Your request has been shared' : 'Thank you for stepping forward'}
+            </p>
           </div>
           <p className="mb-4 text-sm text-muted-foreground">
-            Share it in your community groups so the right person finds you.
+            {isRequest
+              ? 'A family somewhere less alone today. Share this with your network so a kind traveller can find you.'
+              : 'Somewhere, a family just breathed a little easier. Share this in your WhatsApp or community group so the right person can find you.'}
           </p>
-          <TripShareButtons tripId={id} route={trip.route} variant="banner" />
+          <TripShareButtons
+            tripId={id}
+            route={trip.route}
+            shareUrl={pageUrl}
+            isRequest={isRequest}
+            variant="banner"
+          />
         </div>
       )}
 
       <div className="grid gap-8 md:grid-cols-[2fr_1fr]">
         <article className="space-y-6">
           <div>
-            <Badge variant={isRequest ? 'secondary' : 'default'}>
+            <Badge variant={isRequest ? 'slushie' : 'lemon'}>
               {isRequest ? 'Family looking for a companion' : 'Traveller offering help'}
             </Badge>
             <h1 className="mt-3 font-serif text-3xl">
@@ -161,13 +170,32 @@ export default async function TripPage({ params, searchParams }: TripPageProps) 
             ) : null}
           </div>
 
-          {isRequest && trip.elderly_age_band ? (
+          {isRequest && trip.elder_count > 0 ? (
             <Card>
               <CardContent className="space-y-3 p-5">
-                <h2 className="font-serif text-lg">About the parent</h2>
+                <h2 className="font-serif text-lg">
+                  {trip.elder_count === 1
+                    ? 'About the traveller'
+                    : `${trip.elder_count} travellers on this flight`}
+                </h2>
                 <p className="text-sm text-muted-foreground">
-                  Age band <b>{trip.elderly_age_band}</b>. Name, photo and any medical notes are
-                  hidden until the request is accepted.
+                  {trip.elder_count === 1 ? (
+                    <>
+                      Age band <b>{trip.elder_age_bands[0] ?? '—'}</b>.
+                    </>
+                  ) : (
+                    <>
+                      Age bands:{' '}
+                      {trip.elder_age_bands.map((b: string, i: number) => (
+                        <span key={i}>
+                          <b>{b}</b>
+                          {i < trip.elder_age_bands.length - 1 ? ', ' : ''}
+                        </span>
+                      ))}
+                      .
+                    </>
+                  )}{' '}
+                  Names and any medical notes stay hidden until the request is accepted.
                 </p>
               </CardContent>
             </Card>
@@ -175,7 +203,7 @@ export default async function TripPage({ params, searchParams }: TripPageProps) 
 
           <section>
             <h2 className="font-serif text-xl">
-              {isRequest ? 'Languages the parent speaks' : 'Languages the companion speaks'}
+              {isRequest ? 'Languages they speak' : 'Languages the companion speaks'}
             </h2>
             <div className="mt-3">
               <LanguageChipRow
@@ -264,7 +292,13 @@ export default async function TripPage({ params, searchParams }: TripPageProps) 
                     </Link>
                     .
                   </div>
-                  <TripShareButtons tripId={id} route={trip.route} variant="sidebar" />
+                  <TripShareButtons
+                    tripId={id}
+                    route={trip.route}
+                    shareUrl={pageUrl}
+                    isRequest={isRequest}
+                    variant="sidebar"
+                  />
                 </>
               ) : viewer ? (
                 <Button asChild className="w-full" size="lg">

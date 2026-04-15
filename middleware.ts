@@ -9,8 +9,8 @@ import { NextResponse } from 'next/server';
 const isProtected = createRouteMatcher([
   '/post-auth',
   '/onboarding(.*)',
-  '/dashboard(.*)',
-  '/post/(.*)',
+  '/dashboard(.*)', // covers /dashboard/new/offer and /dashboard/new/request
+  '/post/(.*)', // legacy redirect pages — keep gated so redirect fires post-auth
   '/trip/(.*)/request(.*)',
   '/match/(.*)',
   '/api/verify/(.*)',
