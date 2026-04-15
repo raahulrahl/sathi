@@ -15,11 +15,15 @@ export default async function PostRequestPage({ searchParams }: PostRequestPageP
   const supabase = await createSupabaseServerClient();
   const userId = await requireUserId('/post/request');
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role, languages, primary_language')
-    .eq('id', userId)
-    .maybeSingle();
+  // Prefill languages from profile_languages (normalised post-0011).
+  // We only need the array here; the wizard seeds the trip's own
+  // trips.languages from it and the user can adjust before submitting.
+  const { data: langs } = await supabase
+    .from('profile_languages')
+    .select('language, is_primary')
+    .eq('profile_id', userId)
+    .order('is_primary', { ascending: false })
+    .order('language', { ascending: true });
 
   return (
     <div className="container max-w-3xl py-10">
@@ -32,7 +36,7 @@ export default async function PostRequestPage({ searchParams }: PostRequestPageP
       <div className="mt-8">
         <PostWizard
           kind="request"
-          profileLanguages={profile?.languages ?? []}
+          profileLanguages={(langs ?? []).map((l) => l.language)}
           defaults={{
             ...(from && to ? { route: [from.toUpperCase(), to.toUpperCase()] } : {}),
             ...(date ? { travel_date: date } : {}),

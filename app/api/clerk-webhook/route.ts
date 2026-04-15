@@ -107,6 +107,9 @@ export async function POST(request: NextRequest) {
 
     if (event.type === 'user.created') {
       // Create the profiles row. Defaults that onboarding overwrites.
+      // Languages live in profile_languages now and are seeded by the
+      // onboarding form — not here — so users pick their own rather
+      // than inheriting a default English they never asked for.
       const { error } = await supabase.from('profiles').upsert(
         {
           id: u.id,
@@ -114,8 +117,6 @@ export async function POST(request: NextRequest) {
           display_name: displayName,
           photo_url: u.image_url ?? null,
           email: primaryEmail,
-          languages: ['English'],
-          primary_language: 'English',
         },
         { onConflict: 'id' },
       );

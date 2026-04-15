@@ -44,20 +44,23 @@ export async function fetchViewerProfile(
   userId: string | null,
 ): Promise<ViewerProfile> {
   if (!userId) return { role: null, languages: [], primaryLanguage: null };
-  const { data } = await supabase
-    .from('profiles')
-    .select('role, languages, primary_language')
-    .eq('id', userId)
-    .maybeSingle();
-  if (!data) return { role: null, languages: [], primaryLanguage: null };
+  // profiles + profile_languages are two tables post-0011. Parallel
+  // queries — they're independent and the viewer-profile fetch sits on
+  // the search page's critical path, so we don't want a serial round-trip.
+  const [{ data: profile }, { data: langs }] = await Promise.all([
+    supabase.from('profiles').select('role').eq('id', userId).maybeSingle(),
+    supabase.from('profile_languages').select('language, is_primary').eq('profile_id', userId),
+  ]);
+  if (!profile) return { role: null, languages: [], primaryLanguage: null };
   const role =
-    data.role === 'family' || data.role === 'companion'
-      ? (data.role as 'family' | 'companion')
+    profile.role === 'family' || profile.role === 'companion'
+      ? (profile.role as 'family' | 'companion')
       : null;
+  const rows = langs ?? [];
   return {
     role,
-    languages: Array.isArray(data.languages) ? (data.languages as string[]) : [],
-    primaryLanguage: data.primary_language ?? null,
+    languages: rows.map((r) => r.language),
+    primaryLanguage: rows.find((r) => r.is_primary)?.language ?? null,
   };
 }
 

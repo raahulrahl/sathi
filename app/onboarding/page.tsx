@@ -33,15 +33,30 @@ export default async function OnboardingPage() {
   await syncClerkUserToSupabase(userId);
 
   const supabase = await createSupabaseServerClient();
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select(
-      `id, role, display_name, bio, languages, primary_language,
-       whatsapp_number, whatsapp_validated_at,
-       linkedin_url, facebook_url, twitter_url, instagram_url`,
-    )
-    .eq('id', userId)
-    .maybeSingle();
+  // Profile + languages come from two tables now (normalised join).
+  // Run both reads in parallel — they don't depend on each other and
+  // this is the onboarding page's critical path on every render.
+  const [{ data: profile }, { data: langs }] = await Promise.all([
+    supabase
+      .from('profiles')
+      .select(
+        `id, role, display_name, bio,
+         whatsapp_number, whatsapp_validated_at,
+         linkedin_url, facebook_url, twitter_url, instagram_url`,
+      )
+      .eq('id', userId)
+      .maybeSingle(),
+    supabase
+      .from('profile_languages')
+      .select('language, is_primary')
+      .eq('profile_id', userId)
+      .order('is_primary', { ascending: false })
+      .order('language', { ascending: true }),
+  ]);
+
+  // Surface languages primary-first so the form's first chip matches
+  // the primary selection convention.
+  const selectedLanguages = (langs ?? []).map((l) => l.language);
 
   // The same form doubles as "edit your profile" — the dashboard has an
   // Edit button that links back here. If the user already has a role set
@@ -74,7 +89,7 @@ export default async function OnboardingPage() {
           initialValues={{
             displayName: profile?.display_name ?? '',
             role: (profile?.role as 'family' | 'companion' | null) ?? null,
-            languages: profile?.languages ?? [],
+            languages: selectedLanguages,
             whatsappNumber: profile?.whatsapp_number ?? '',
             whatsappValidatedAt: profile?.whatsapp_validated_at ?? null,
             bio: profile?.bio ?? '',

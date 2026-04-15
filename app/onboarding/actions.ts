@@ -119,8 +119,6 @@ export async function saveOnboardingProfile(
     .update({
       display_name: parsed.data.displayName,
       role: parsed.data.role,
-      primary_language: parsed.data.primaryLanguage,
-      languages: parsed.data.languages,
       whatsapp_number: finalPhone,
       whatsapp_validated_at: preservedValidatedAt,
       bio: parsed.data.bio,
@@ -135,10 +133,19 @@ export async function saveOnboardingProfile(
     return { ok: false, error: `Save failed: ${error.message}` };
   }
 
-  // Mirror into the normalised profile_languages table.
-  // Wipe + reinsert strategy: simple, idempotent, correct. Volume per
-  // user is tiny (<10 languages) so the delete+insert cost is trivial.
-  await supabase.from('profile_languages').delete().eq('profile_id', userId);
+  // profile_languages is now the sole source of truth for who speaks
+  // what. Wipe + reinsert is simple and correct at our per-user volume
+  // (<10 rows). A failure here DOES fail the whole save — previously
+  // we swallowed it because profiles.languages was the authoritative
+  // cache, but that column is gone now, so a sync failure = no languages
+  // saved at all.
+  const { error: wipeError } = await supabase
+    .from('profile_languages')
+    .delete()
+    .eq('profile_id', userId);
+  if (wipeError) {
+    return { ok: false, error: `Save failed (languages wipe): ${wipeError.message}` };
+  }
   const langRows = parsed.data.languages.map((language) => ({
     profile_id: userId,
     language,
@@ -146,12 +153,8 @@ export async function saveOnboardingProfile(
   }));
   if (langRows.length > 0) {
     const { error: langError } = await supabase.from('profile_languages').insert(langRows);
-    // Don't hard-fail the whole save on a language sync glitch; the
-    // profiles.languages array (denormalised cache) is the authoritative
-    // source of truth for display today.
     if (langError) {
-      // eslint-disable-next-line no-console
-      console.warn('[onboarding] profile_languages sync failed:', langError.message);
+      return { ok: false, error: `Save failed (languages insert): ${langError.message}` };
     }
   }
 

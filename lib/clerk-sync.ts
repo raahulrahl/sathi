@@ -45,7 +45,10 @@ export async function syncClerkUserToSupabase(userId: string): Promise<void> {
       .trim() || (primaryEmail ? primaryEmail.split('@')[0] : null);
 
   // Insert the profile once; never overwrite once it exists (onboarding
-  // owns user-editable fields after creation).
+  // owns user-editable fields after creation). No default language here —
+  // the onboarding form requires the user to pick at least one before it
+  // will save, so the "language not set yet" window is bounded to the
+  // pre-onboarding pages (which don't render languages anyway).
   await supabase
     .from('profiles')
     .insert({
@@ -54,8 +57,6 @@ export async function syncClerkUserToSupabase(userId: string): Promise<void> {
       display_name: displayName,
       photo_url: user.imageUrl ?? null,
       email: primaryEmail,
-      languages: ['English'],
-      primary_language: 'English',
     })
     .then(
       () => undefined,

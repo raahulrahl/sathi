@@ -33,8 +33,8 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
     .select(
       `id, status, created_at, poster_marked_complete, requester_marked_complete,
        trip:trips!inner(*),
-       poster:profiles!matches_poster_id_fkey(id, display_name, full_name, photo_url, primary_language, languages),
-       requester:profiles!matches_requester_id_fkey(id, display_name, full_name, photo_url, primary_language, languages)`,
+       poster:profiles!matches_poster_id_fkey(id, display_name, photo_url),
+       requester:profiles!matches_requester_id_fkey(id, display_name, photo_url)`,
     )
     .eq('id', id)
     .maybeSingle();
@@ -61,23 +61,29 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
     poster: {
       id: string;
       display_name: string | null;
-      full_name: string | null;
       photo_url: string | null;
-      primary_language: string;
-      languages: string[];
     };
     requester: {
       id: string;
       display_name: string | null;
-      full_name: string | null;
       photo_url: string | null;
-      primary_language: string;
-      languages: string[];
     };
   };
 
   const youArePoster = userId === m.poster.id;
   const other = youArePoster ? m.requester : m.poster;
+
+  // Fetch the other person's primary language separately — profile_languages
+  // is normalised post-0011 and PostgREST embeds from `profiles` would need
+  // a composite join we don't have. One extra round trip; trivial at this
+  // scale and keeps the code obvious.
+  const { data: otherPrimaryLang } = await supabase
+    .from('profile_languages')
+    .select('language')
+    .eq('profile_id', other.id)
+    .eq('is_primary', true)
+    .maybeSingle();
+  const otherPrimaryLanguage = otherPrimaryLang?.language ?? null;
 
   return (
     <div className="container max-w-4xl py-10">
@@ -86,7 +92,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
         <Badge variant="success">{m.status}</Badge>
       </div>
       <h1 className="mt-1 font-serif text-3xl">
-        You're matched with {other.full_name ?? other.display_name ?? 'your Saathi'}
+        You're matched with {other.display_name ?? 'your Saathi'}
       </h1>
       <p className="mt-1 text-sm text-muted-foreground">
         Matched on {format(parseISO(m.trip.travel_date), 'EEE, d LLL yyyy')} ·{' '}
@@ -105,7 +111,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
                 {m.trip.airline ? <div>Airline: {m.trip.airline}</div> : null}
                 <div>Date: {format(parseISO(m.trip.travel_date), 'EEEE, d LLLL yyyy')}</div>
                 <div className="mt-2">
-                  <LanguageChipRow languages={m.trip.languages} primary={other.primary_language} />
+                  <LanguageChipRow languages={m.trip.languages} primary={otherPrimaryLanguage} />
                 </div>
                 {m.trip.notes ? <p className="text-muted-foreground">{m.trip.notes}</p> : null}
               </div>
@@ -148,9 +154,9 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
                 <h2 className="font-serif text-lg">We&rsquo;re still building this bit</h2>
                 <p className="text-sm leading-relaxed text-warm-charcoal">
                   The in-app chat, mark-complete, review, and photo-upload flows are on the way —
-                  they&rsquo;re not live yet. For now, message{' '}
-                  <b>{other.full_name ?? other.display_name ?? 'them'}</b> directly using their
-                  linked accounts (you can see which platforms they&rsquo;ve verified on their{' '}
+                  they&rsquo;re not live yet. For now, message <b>{other.display_name ?? 'them'}</b>{' '}
+                  directly using their linked accounts (you can see which platforms they&rsquo;ve
+                  verified on their{' '}
                   <Link
                     href={`/profile/${other.id}`}
                     className="text-marigold-700 underline-offset-4 hover:underline"
@@ -173,7 +179,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
             <CardContent className="space-y-3 p-5">
               <h2 className="font-serif text-lg">Contact</h2>
               <p className="text-sm">
-                <b>{other.full_name ?? other.display_name}</b>
+                <b>{other.display_name ?? 'your Saathi'}</b>
               </p>
               <p className="text-sm text-muted-foreground">
                 Contact channels are visible to both of you now that the match is active. Message
