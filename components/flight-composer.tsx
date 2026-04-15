@@ -198,10 +198,10 @@ export function FlightComposer({
       >
         {/* Route row — dots connected by dashed lines */}
         <div className="space-y-2">
-          <Label className="clay-label">Route</Label>
+          <Label className="text-sm font-medium text-warm-charcoal">Where is the flight?</Label>
           <div className="flex flex-wrap items-center gap-2">
             {route.map((code, i) => {
-              const legLabel = i === 0 ? 'From' : i === route.length - 1 ? 'To' : 'Via';
+              const legLabel = i === 0 ? 'Starts' : i === route.length - 1 ? 'Lands' : 'Via';
               const isRemovable = i !== 0 && i !== route.length - 1;
               return (
                 <div key={i} className="flex items-center gap-2">
@@ -228,7 +228,7 @@ export function FlightComposer({
               onClick={addLayover}
               className="clay-hover inline-flex items-center gap-1 rounded-full border border-dashed border-oat bg-transparent px-3 py-1.5 text-xs font-medium text-warm-charcoal hover:bg-oat-light"
             >
-              <Plus className="size-3.5" /> Layover
+              <Plus className="size-3.5" /> Add a stop
             </button>
           </div>
         </div>
@@ -241,8 +241,8 @@ export function FlightComposer({
           )}
         >
           <div className="space-y-2">
-            <Label htmlFor="fc-date" className="clay-label">
-              Travel date
+            <Label htmlFor="fc-date" className="text-sm font-medium text-warm-charcoal">
+              When is it?
             </Label>
             <Input
               id="fc-date"
@@ -252,8 +252,8 @@ export function FlightComposer({
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="fc-flight" className="clay-label">
-              Flight numbers <span className="text-warm-silver">· one per leg</span>
+            <Label htmlFor="fc-flight" className="text-sm font-medium text-warm-charcoal">
+              Which flights? <span className="text-warm-silver">(if you know them)</span>
             </Label>
             <div
               className={cn(
@@ -300,7 +300,7 @@ export function FlightComposer({
             onClick={() => setShowMore((s) => !s)}
             className="inline-flex items-center gap-1 text-sm font-medium text-warm-charcoal hover:text-foreground"
           >
-            More details
+            Add airline or time of day
             <ChevronDown
               className={cn('size-4 transition-transform', showMore ? 'rotate-180' : 'rotate-0')}
             />
@@ -308,7 +308,7 @@ export function FlightComposer({
           {showMore ? (
             <div className="mt-3 grid gap-4 rounded-2xl border border-dashed border-oat p-4 md:grid-cols-[1fr_auto]">
               <div className="space-y-2">
-                <Label htmlFor="fc-airline" className="clay-label">
+                <Label htmlFor="fc-airline" className="text-sm font-medium text-warm-charcoal">
                   Airline
                 </Label>
                 <Input
@@ -319,7 +319,7 @@ export function FlightComposer({
                 />
               </div>
               <div className="space-y-2">
-                <Label className="clay-label">Time of day</Label>
+                <Label className="text-sm font-medium text-warm-charcoal">What time roughly?</Label>
                 <div className="flex flex-wrap gap-1.5">
                   {TIME_BANDS.map(({ id, label, icon: Icon }) => {
                     const active = timeOfDay === id;
@@ -475,7 +475,7 @@ function ModeSubmit({ mode, onSelect, pending }: ModeSubmitProps) {
         )}
       >
         <Send className="size-4" />
-        Offer this flight
+        I&apos;m flying this
       </button>
       <button
         type="button"
@@ -489,7 +489,7 @@ function ModeSubmit({ mode, onSelect, pending }: ModeSubmitProps) {
         )}
       >
         <Search className="size-4" />
-        Seek a Saathi
+        Find someone on this
       </button>
     </div>
   );
@@ -579,12 +579,12 @@ function LiveCounter({ route, date, flights, enabled }: LiveCounterProps) {
           )}
         />
         {status === 'loading' ? (
-          'Counting…'
+          'Looking…'
         ) : count === 0 ? (
-          <>No Saathis on this flight yet — you could be the first to post.</>
+          <>No one on this flight yet — you could be the first to post.</>
         ) : (
           <>
-            <b>{count}</b> {count === 1 ? 'Saathi' : 'Saathis'} on this flight
+            <b>{count}</b> {count === 1 ? 'traveller' : 'travellers'} on this flight
             <ArrowRight className="size-3.5" />
           </>
         )}
