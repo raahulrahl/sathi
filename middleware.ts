@@ -7,6 +7,7 @@ import { NextResponse } from 'next/server';
  * dashboard, and in-match views require a session.
  */
 const isProtected = createRouteMatcher([
+  '/post-auth',
   '/onboarding(.*)',
   '/dashboard(.*)',
   '/post/(.*)',

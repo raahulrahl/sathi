@@ -94,7 +94,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         <h1 className="font-serif text-3xl">Dashboard</h1>
         <div className="flex flex-wrap gap-2">
           <Button asChild variant="ghost" size="sm">
-            <Link href="/onboarding">
+            <Link href="/onboarding?edit=1">
               <Pencil className="mr-1 size-3.5" /> Edit profile
             </Link>
           </Button>

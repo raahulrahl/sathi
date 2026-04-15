@@ -1,8 +1,13 @@
 import type { Metadata } from 'next';
+import { redirect } from 'next/navigation';
 import { requireUserId } from '@/lib/auth-guard';
 import { syncClerkUserToSupabase } from '@/lib/clerk-sync';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { OnboardingForm } from './onboarding-form';
+
+interface OnboardingPageProps {
+  searchParams: Promise<{ edit?: string }>;
+}
 
 export const metadata: Metadata = { title: 'Welcome · Saathi' };
 
@@ -26,13 +31,27 @@ export const metadata: Metadata = { title: 'Welcome · Saathi' };
  * Clerk webhook + self-heal — we use it for trust badges on profile
  * cards, not as a gate.
  */
-export default async function OnboardingPage() {
+export default async function OnboardingPage({ searchParams }: OnboardingPageProps) {
+  const { edit } = await searchParams;
   const userId = await requireUserId('/onboarding');
 
   // Self-heal: create/update profile row from Clerk state.
   await syncClerkUserToSupabase(userId);
 
   const supabase = await createSupabaseServerClient();
+  // Belt-and-braces: even if Clerk's AFTER_SIGN_IN_URL still points here
+  // (env var hasn't been reloaded, legacy session, etc.), a returning user
+  // who already has a role shouldn't be stuck on the onboarding form.
+  // They can still land here explicitly via ?edit=1 from the dashboard to
+  // update their profile.
+  const { data: roleCheck } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', userId)
+    .maybeSingle();
+  if (roleCheck?.role && edit !== '1') {
+    redirect('/dashboard');
+  }
   // Profile + languages come from two tables now (normalised join).
   // Run both reads in parallel — they don't depend on each other and
   // this is the onboarding page's critical path on every render.
