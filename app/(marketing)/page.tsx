@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { auth } from '@clerk/nextjs/server';
 import { FlightComposer } from '@/components/flight-composer';
+import { PeekWidget } from '@/components/peek-widget';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 /**
@@ -59,6 +60,28 @@ export default async function LandingPage() {
             className="max-w-4xl"
           />
         </div>
+      </section>
+
+      {/* ------------------------------------------------------------------
+          PEEK — answers the chicken-and-egg question: "Should I buy the
+          ticket?" Both sides of the market need this. A family checking
+          sees if any companions have already posted for that week; a
+          companion checking sees if any families are already looking. The
+          widget is visually quieter than the main composer (dashed border,
+          no shadow) so people don't fill both — this is a peek, the other
+          is a commit.
+         ------------------------------------------------------------------ */}
+      <section className="container max-w-4xl pb-12 pt-0">
+        <div className="mx-auto max-w-2xl space-y-2 text-center">
+          <h2 className="font-display text-2xl font-semibold leading-tight tracking-[-0.02em] md:text-3xl">
+            Haven&rsquo;t booked the ticket yet?
+          </h2>
+          <p className="text-base leading-relaxed text-warm-charcoal">
+            Before you buy a seat, peek at who&rsquo;s already flying that week. Only book the
+            ticket if you can see a saathi on it.
+          </p>
+        </div>
+        <PeekWidget className="mx-auto mt-6 max-w-3xl" />
       </section>
 
       {/* ------------------------------------------------------------------

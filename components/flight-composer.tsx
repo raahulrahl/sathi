@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState, useTransition } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@supabase/supabase-js';
 import { format } from 'date-fns';
@@ -196,40 +196,69 @@ export function FlightComposer({
           isHero ? 'p-6 md:p-8' : 'p-4 md:p-5',
         )}
       >
-        {/* Route row — dots connected by dashed lines */}
+        {/* Route row — source pinned left, destination pinned right, dashed
+            connectors and any layovers flex to fill the middle. "+ Add" sits
+            between the last via (or source) and the destination so stops
+            accumulate in travel order: src → stop1 → stop2 → +Add → dst. */}
         <div className="space-y-2">
           <Label className="text-sm font-medium text-warm-charcoal">Where is the flight?</Label>
-          <div className="flex flex-wrap items-center gap-2">
-            {route.map((code, i) => {
-              const legLabel = i === 0 ? 'Starts' : i === route.length - 1 ? 'Lands' : 'Via';
-              const isRemovable = i !== 0 && i !== route.length - 1;
+          <div className="flex flex-wrap items-center gap-2 md:flex-nowrap md:gap-3">
+            {/* Source — always first */}
+            <RouteDot
+              index={0}
+              total={route.length}
+              label="Starts"
+              value={route[0] ?? ''}
+              onChange={(v) => setRouteAt(0, v)}
+              big={isHero}
+            />
+
+            {/* Middle — dashed lines, optional layovers, add-stop button */}
+            {route.slice(1, -1).map((code, i) => {
+              const actualIndex = i + 1;
               return (
-                <div key={i} className="flex items-center gap-2">
+                <Fragment key={actualIndex}>
+                  <div
+                    aria-hidden
+                    className="h-px min-w-[16px] flex-1 border-t-2 border-dashed border-oat md:min-w-[24px]"
+                  />
                   <RouteDot
-                    index={i}
+                    index={actualIndex}
                     total={route.length}
-                    label={legLabel}
+                    label="Via"
                     value={code}
-                    onChange={(v) => setRouteAt(i, v)}
-                    {...(isRemovable ? { onRemove: () => removeLayover(i) } : {})}
+                    onChange={(v) => setRouteAt(actualIndex, v)}
+                    onRemove={() => removeLayover(actualIndex)}
                     big={isHero}
                   />
-                  {i < route.length - 1 ? (
-                    <div
-                      aria-hidden
-                      className="h-px min-w-[16px] flex-1 border-t-2 border-dashed border-oat md:min-w-[24px]"
-                    />
-                  ) : null}
-                </div>
+                </Fragment>
               );
             })}
+            <div
+              aria-hidden
+              className="h-px min-w-[16px] flex-1 border-t-2 border-dashed border-oat md:min-w-[24px]"
+            />
             <button
               type="button"
               onClick={addLayover}
-              className="clay-hover inline-flex items-center gap-1 rounded-full border border-dashed border-oat bg-transparent px-3 py-1.5 text-xs font-medium text-warm-charcoal hover:bg-oat-light"
+              className="clay-hover inline-flex shrink-0 items-center gap-1 rounded-full border border-dashed border-oat bg-transparent px-3 py-1.5 text-xs font-medium text-warm-charcoal hover:bg-oat-light"
             >
-              <Plus className="size-3.5" /> Add a stop
+              <Plus className="size-3.5" /> Add
             </button>
+            <div
+              aria-hidden
+              className="h-px min-w-[16px] flex-1 border-t-2 border-dashed border-oat md:min-w-[24px]"
+            />
+
+            {/* Destination — always last */}
+            <RouteDot
+              index={route.length - 1}
+              total={route.length}
+              label="Lands"
+              value={route[route.length - 1] ?? ''}
+              onChange={(v) => setRouteAt(route.length - 1, v)}
+              big={isHero}
+            />
           </div>
         </div>
 
