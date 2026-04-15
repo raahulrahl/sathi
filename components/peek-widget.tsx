@@ -30,6 +30,7 @@ import { format } from 'date-fns';
 import { ArrowRight, Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { dateWindow } from '@/lib/dates';
 import { isValidIata, searchAirports } from '@/lib/iata';
 import { cn } from '@/lib/utils';
 
@@ -82,11 +83,10 @@ export function PeekWidget({ className }: { className?: string }) {
     const t = to.toUpperCase();
     try {
       // ±3 day window — same shape as the server-side matching, so the peek
-      // is a faithful preview of what a search would return.
-      const centre = new Date(`${date}T00:00:00Z`).getTime();
-      const window = 3 * 86_400_000;
-      const start = new Date(centre - window).toISOString().slice(0, 10);
-      const end = new Date(centre + window).toISOString().slice(0, 10);
+      // is a faithful preview of what a search would return. Uses the
+      // shared dateWindow() helper from lib/dates to keep this logic in
+      // one place.
+      const { start, end } = dateWindow(date, 3);
 
       const base = supabase
         .from('public_trips')

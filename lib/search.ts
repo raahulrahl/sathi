@@ -2,7 +2,12 @@ import 'server-only';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { TripCardData } from '@/components/trip-card';
+import { dateWindow } from '@/lib/dates';
 import type { RankableTrip } from '@/lib/matching';
+
+// Re-export so existing server callers can keep importing from `lib/search`.
+// New callers (client components) should import from `lib/dates` directly.
+export { dateWindow };
 
 /**
  * Server-side search helpers. Extracted from `app/search/page.tsx` so the
@@ -174,18 +179,4 @@ export async function enrichTripsWithProfiles(
       card,
     };
   });
-}
-
-/**
- * Compute ISO-formatted start + end dates bracketing `centre` by
- * `days` days in each direction. Used as the travel_date window for
- * route-only searches (flight-number searches ignore the window).
- */
-export function dateWindow(centre: string, days: number): { start: string; end: string } {
-  const c = new Date(`${centre}T00:00:00Z`);
-  const ms = days * 86_400_000;
-  return {
-    start: new Date(c.getTime() - ms).toISOString().slice(0, 10),
-    end: new Date(c.getTime() + ms).toISOString().slice(0, 10),
-  };
 }

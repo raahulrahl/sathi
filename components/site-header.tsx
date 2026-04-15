@@ -3,6 +3,12 @@ import { auth } from '@clerk/nextjs/server';
 import { UserButton } from '@clerk/nextjs';
 import { Button } from '@/components/ui/button';
 
+/**
+ * Top navigation bar rendered on every page via the root layout.
+ * Server component so the signed-in check happens without a client-side
+ * round-trip. Clerk's <UserButton> handles its own interactivity on the
+ * client side.
+ */
 export async function SiteHeader() {
   const { userId } = await auth();
   const signedIn = !!userId;

@@ -2,6 +2,16 @@ import { ArrowRight, Plane } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { lookupAirport } from '@/lib/iata';
 
+/**
+ * Horizontal route display like `CCU → DOH → AMS`. Each segment shows
+ * the IATA code (always) plus the city name in muted text (by default).
+ * Arrows between segments render at mid-weight so the chain reads as a
+ * single unit. Used on trip cards, the match page, and the trip detail
+ * page.
+ *
+ * Set `showCity={false}` for dense listings where only the codes matter
+ * (e.g. the search results column headers).
+ */
 export function RouteLine({
   route,
   className,

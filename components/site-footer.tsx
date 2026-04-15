@@ -1,5 +1,11 @@
 import Link from 'next/link';
 
+/**
+ * Site-wide footer with Product / Company / Legal link columns plus a
+ * "Saathi" brand block and a copyright line. Server component — no
+ * interactivity. Always anchored at the bottom of the flex column in
+ * the root layout.
+ */
 export function SiteFooter() {
   return (
     <footer className="mt-20 px-4 pb-10">

@@ -2,6 +2,12 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
+/**
+ * Empty-state block used in place of results when a list has zero rows.
+ * Shows an optional icon, a headline, a description, and optionally a
+ * single CTA link. Used by the dashboard tabs, search results columns,
+ * and the landing page.
+ */
 export function EmptyState({
   title,
   description,
