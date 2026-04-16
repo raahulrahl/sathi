@@ -20,7 +20,6 @@
 import { auth } from '@clerk/nextjs/server';
 import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
-import { checkRateLimit, clientIp } from '@/lib/rate-limit';
 import { isPlausibleE164 } from '@/lib/verify';
 import { startSmsVerification } from '@/lib/sms-auth';
 
@@ -32,26 +31,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: false, error: 'Not signed in' }, { status: 401 });
   }
 
-  const ip = clientIp(request.headers);
-  const [userCheck, ipCheck] = await Promise.all([
-    checkRateLimit(`sms-start:user:${userId}`),
-    checkRateLimit(`sms-start:ip:${ip}`),
-  ]);
-  if (!userCheck.success || !ipCheck.success) {
-    const failing = !userCheck.success ? userCheck : ipCheck;
-    return NextResponse.json(
-      { ok: false, error: 'Too many requests. Try again in a minute.' },
-      {
-        status: 429,
-        headers: {
-          'Retry-After': String(Math.max(1, Math.ceil((failing.reset - Date.now()) / 1000))),
-          'X-RateLimit-Limit': String(failing.limit),
-          'X-RateLimit-Remaining': String(failing.remaining),
-          'X-RateLimit-Reset': String(Math.ceil(failing.reset / 1000)),
-        },
-      },
-    );
-  }
+  // Rate limiting removed — will be re-added when Upstash is configured.
 
   const raw = await request.json().catch(() => null);
   const parsed = Body.safeParse(raw);
