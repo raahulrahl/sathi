@@ -33,8 +33,8 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
     .select(
       `id, status, created_at, poster_marked_complete, requester_marked_complete,
        trip:trips!inner(*),
-       poster:profiles!matches_poster_id_fkey(id, display_name, photo_url),
-       requester:profiles!matches_requester_id_fkey(id, display_name, photo_url)`,
+       poster:profiles!matches_poster_id_fkey(id, display_name, photo_url, whatsapp_number, email, linkedin_url, twitter_url, instagram_url, facebook_url),
+       requester:profiles!matches_requester_id_fkey(id, display_name, photo_url, whatsapp_number, email, linkedin_url, twitter_url, instagram_url, facebook_url)`,
     )
     .eq('id', id)
     .maybeSingle();
@@ -58,11 +58,23 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
       id: string;
       display_name: string | null;
       photo_url: string | null;
+      whatsapp_number: string | null;
+      email: string | null;
+      linkedin_url: string | null;
+      twitter_url: string | null;
+      instagram_url: string | null;
+      facebook_url: string | null;
     };
     requester: {
       id: string;
       display_name: string | null;
       photo_url: string | null;
+      whatsapp_number: string | null;
+      email: string | null;
+      linkedin_url: string | null;
+      twitter_url: string | null;
+      instagram_url: string | null;
+      facebook_url: string | null;
     };
   };
 
@@ -197,10 +209,78 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
               <p className="text-sm">
                 <b>{other.display_name ?? 'your Saathi'}</b>
               </p>
-              <p className="text-sm text-muted-foreground">
-                Contact channels are visible to both of you now that the match is active. Message
-                through your linked accounts.
-              </p>
+              <ul className="space-y-2 text-sm">
+                {other.whatsapp_number ? (
+                  <li>
+                    <a
+                      href={`https://wa.me/${other.whatsapp_number.replace(/\+/g, '')}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-matcha-800 underline underline-offset-4"
+                    >
+                      WhatsApp {other.whatsapp_number}
+                    </a>
+                  </li>
+                ) : null}
+                {other.email ? (
+                  <li>
+                    <a
+                      href={`mailto:${other.email}`}
+                      className="text-matcha-800 underline underline-offset-4"
+                    >
+                      {other.email}
+                    </a>
+                  </li>
+                ) : null}
+                {other.linkedin_url ? (
+                  <li>
+                    <a
+                      href={other.linkedin_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-matcha-800 underline underline-offset-4"
+                    >
+                      LinkedIn
+                    </a>
+                  </li>
+                ) : null}
+                {other.twitter_url ? (
+                  <li>
+                    <a
+                      href={other.twitter_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-matcha-800 underline underline-offset-4"
+                    >
+                      X / Twitter
+                    </a>
+                  </li>
+                ) : null}
+                {other.instagram_url ? (
+                  <li>
+                    <a
+                      href={other.instagram_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-matcha-800 underline underline-offset-4"
+                    >
+                      Instagram
+                    </a>
+                  </li>
+                ) : null}
+                {other.facebook_url ? (
+                  <li>
+                    <a
+                      href={other.facebook_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-matcha-800 underline underline-offset-4"
+                    >
+                      Facebook
+                    </a>
+                  </li>
+                ) : null}
+              </ul>
             </CardContent>
           </Card>
 
