@@ -24,9 +24,6 @@ export async function SiteHeader() {
           <span className="clay-label hidden sm:inline">साथी</span>
         </Link>
         <nav className="hidden items-center gap-8 text-sm md:flex">
-          <Link href="/browse" className="font-medium text-warm-charcoal hover:text-foreground">
-            Browse
-          </Link>
           <Link href="/about" className="font-medium text-warm-charcoal hover:text-foreground">
             About &amp; trust
           </Link>

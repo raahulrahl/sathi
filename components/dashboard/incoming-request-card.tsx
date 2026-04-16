@@ -27,7 +27,6 @@ export interface IncomingRequest {
     id: string;
     display_name: string | null;
     photo_url: string | null;
-    primary_language: string;
   };
 }
 

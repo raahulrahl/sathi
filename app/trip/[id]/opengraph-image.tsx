@@ -83,6 +83,17 @@ export default async function TripOgImage({ params }: Props) {
     .slice(0, 2)
     .toUpperCase();
 
+  // The emotional tagline rotates slightly per kind so request shares
+  // read as "find someone for them" and offer shares read as "I'm
+  // offering". Either way the lower-strip reinforces the why: nobody
+  // should fly alone if a kind stranger on the same plane could help.
+  const taglineLine1 = isRequest
+    ? 'No one should navigate an airport alone.'
+    : 'No one should navigate an airport alone.';
+  const taglineLine2 = isRequest
+    ? 'Help a family find a kind companion on this flight.'
+    : `${firstName} is volunteering — a small act of kindness, in the air.`;
+
   return new ImageResponse(
     <div
       style={{
@@ -96,10 +107,10 @@ export default async function TripOgImage({ params }: Props) {
         overflow: 'hidden',
       }}
     >
-      {/* Top green accent bar */}
+      {/* Top accent bar */}
       <div style={{ width: '100%', height: 8, background: '#078a52', display: 'flex' }} />
 
-      {/* Decorative circle — top right */}
+      {/* Decorative circles — give the cream canvas warmth */}
       <div
         style={{
           position: 'absolute',
@@ -113,20 +124,46 @@ export default async function TripOgImage({ params }: Props) {
           display: 'flex',
         }}
       />
-      {/* Decorative circle — bottom left */}
       <div
         style={{
           position: 'absolute',
           bottom: -60,
           left: -60,
-          width: 200,
-          height: 200,
+          width: 220,
+          height: 220,
           borderRadius: '50%',
-          background: '#dad4c8',
-          opacity: 0.3,
+          background: '#fed7aa',
+          opacity: 0.4,
           display: 'flex',
         }}
       />
+
+      {/* Brand strip */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 10,
+          padding: '20px 72px 0',
+        }}
+      >
+        <span style={{ fontSize: 30, display: 'flex' }}>🌼</span>
+        <span
+          style={{
+            fontSize: 22,
+            fontWeight: 700,
+            color: '#078a52',
+            letterSpacing: '-0.01em',
+            display: 'flex',
+          }}
+        >
+          saathi
+        </span>
+        <span style={{ color: '#dad4c8', display: 'flex' }}>·</span>
+        <span style={{ fontSize: 18, color: '#9f9b93', display: 'flex' }}>
+          a community on the flight home
+        </span>
+      </div>
 
       {/* Main content */}
       <div
@@ -134,17 +171,16 @@ export default async function TripOgImage({ params }: Props) {
           flex: 1,
           display: 'flex',
           flexDirection: 'column',
-          padding: '56px 72px',
+          padding: '32px 72px 28px',
           justifyContent: 'space-between',
         }}
       >
         {/* Top: profile + headline */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 28 }}>
-          {/* Avatar */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
           <div
             style={{
-              width: 80,
-              height: 80,
+              width: 72,
+              height: 72,
               borderRadius: '50%',
               overflow: 'hidden',
               background: '#dad4c8',
@@ -160,14 +196,14 @@ export default async function TripOgImage({ params }: Props) {
               <img
                 src={photoData}
                 alt=""
-                width={80}
-                height={80}
+                width={72}
+                height={72}
                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
               />
             ) : (
               <span
                 style={{
-                  fontSize: 28,
+                  fontSize: 26,
                   fontWeight: 700,
                   color: '#4a3d32',
                   display: 'flex',
@@ -178,24 +214,26 @@ export default async function TripOgImage({ params }: Props) {
             )}
           </div>
 
-          {/* Headline */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             <span
               style={{
-                fontSize: 22,
-                color: '#9f9b93',
-                fontWeight: 500,
-                letterSpacing: '-0.01em',
+                fontSize: 18,
+                color: isRequest ? '#0089ad' : '#9d6a09',
+                fontWeight: 700,
+                letterSpacing: '0.06em',
+                textTransform: 'uppercase',
+                display: 'flex',
               }}
             >
-              {isRequest ? 'Request on Saathi' : 'Offer on Saathi'}
+              {isRequest ? 'Companion wanted' : 'Offering to help'}
             </span>
             <span
               style={{
-                fontSize: 32,
+                fontSize: 30,
                 fontWeight: 700,
                 color: '#4a3d32',
                 letterSpacing: '-0.02em',
+                display: 'flex',
               }}
             >
               {headline}
@@ -203,8 +241,8 @@ export default async function TripOgImage({ params }: Props) {
           </div>
         </div>
 
-        {/* Middle: route */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        {/* Middle: the route — the heart of the card */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div
             style={{
               fontSize: 82,
@@ -223,8 +261,8 @@ export default async function TripOgImage({ params }: Props) {
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: 16,
-              fontSize: 26,
+              gap: 14,
+              fontSize: 24,
               color: '#4a3d32',
               fontWeight: 500,
             }}
@@ -241,11 +279,12 @@ export default async function TripOgImage({ params }: Props) {
           {notesSnippet ? (
             <div
               style={{
-                fontSize: 22,
-                color: '#9f9b93',
+                fontSize: 20,
+                color: '#7c6f5f',
                 fontStyle: 'italic',
-                maxWidth: 800,
+                maxWidth: 900,
                 display: 'flex',
+                marginTop: 4,
               }}
             >
               &ldquo;{notesSnippet}&rdquo;
@@ -253,29 +292,48 @@ export default async function TripOgImage({ params }: Props) {
           ) : null}
         </div>
 
-        {/* Bottom: Saathi brand */}
+        {/* Bottom: emotional tagline + URL */}
         <div
           style={{
             display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
+            flexDirection: 'column',
+            gap: 4,
+            paddingTop: 18,
+            borderTop: '1px solid #dad4c8',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ fontSize: 40, display: 'flex' }}>🌼</span>
+          <span
+            style={{
+              fontSize: 18,
+              color: '#4a3d32',
+              fontWeight: 600,
+              letterSpacing: '-0.01em',
+              display: 'flex',
+            }}
+          >
+            {taglineLine1}
+          </span>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'baseline',
+              justifyContent: 'space-between',
+              gap: 16,
+            }}
+          >
+            <span style={{ fontSize: 16, color: '#7c6f5f', display: 'flex' }}>{taglineLine2}</span>
             <span
               style={{
-                fontSize: 28,
+                fontSize: 18,
                 fontWeight: 700,
                 color: '#078a52',
-                letterSpacing: '-0.02em',
+                letterSpacing: '-0.01em',
                 display: 'flex',
               }}
             >
-              saathi
+              getsaathi.com
             </span>
           </div>
-          <span style={{ fontSize: 20, color: '#9f9b93' }}>getsaathi.com</span>
         </div>
       </div>
     </div>,

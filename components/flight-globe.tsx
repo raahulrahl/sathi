@@ -6,8 +6,19 @@ import type { Arc, COBEOptions, Globe } from 'cobe';
 import { getCoords } from '@/lib/airport-coords';
 
 interface FlightGlobeProps {
-  /** Ordered list of IATA airport codes, e.g. ["CCU", "DOH", "AMS"] */
-  route: string[];
+  /**
+   * One ordered list of IATA codes, e.g. ["CCU", "DOH", "AMS"].
+   * Used by the post / trip flows where a single trip is being shown.
+   */
+  route?: string[] | undefined;
+  /**
+   * Multiple distinct routes. Each inner array is its own multi-leg trip.
+   * Used by the home page world view to render arcs for many trips at once.
+   * If both `route` and `routes` are passed, they're concatenated.
+   */
+  routes?: string[][] | undefined;
+  /** Auto-rotate slowly. Off by default — felt distracting in the post flow. */
+  autoRotate?: boolean | undefined;
   className?: string | undefined;
 }
 
@@ -26,7 +37,7 @@ function midLng(lng1: number, lng2: number): number {
   return lng1 + diff / 2;
 }
 
-export function FlightGlobe({ route, className }: FlightGlobeProps) {
+export function FlightGlobe({ route, routes, autoRotate = false, className }: FlightGlobeProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const globeRef = useRef<Globe | null>(null);
   const rafRef = useRef<number>(0);
@@ -35,39 +46,55 @@ export function FlightGlobe({ route, className }: FlightGlobeProps) {
   const lastX = useRef(0);
   const dragDelta = useRef(0);
 
+  // Build the canonical route list — accept either prop, concatenate if both.
+  const allRoutes: string[][] = [...(route && route.length > 0 ? [route] : []), ...(routes ?? [])];
+
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    // Resolve coordinates for each known IATA code in the route
-    const resolvedCoords = route
-      .map((iata) => ({ iata, coord: getCoords(iata) }))
-      .filter((e): e is { iata: string; coord: [number, number] } => e.coord !== undefined);
+    // Resolve every leg of every route into coordinates. Drop unknown IATAs.
+    const resolvedRoutes = allRoutes
+      .map((r) =>
+        r.map((iata) => getCoords(iata)).filter((c): c is [number, number] => c !== undefined),
+      )
+      .filter((coords) => coords.length >= 2);
 
-    // Center globe on the midpoint of departure → final destination
-    if (resolvedCoords.length >= 2) {
-      const fromLng = resolvedCoords[0]!.coord[1];
-      const toLng = resolvedCoords[resolvedCoords.length - 1]!.coord[1];
+    // Center globe on the midpoint of the FIRST route — gives a consistent
+    // view when only one route is shown. Multi-route world view ends up
+    // rotating anyway via auto-rotate.
+    const firstRoute = resolvedRoutes[0];
+    if (firstRoute && firstRoute.length >= 2) {
+      const fromLng = firstRoute[0]![1];
+      const toLng = firstRoute[firstRoute.length - 1]![1];
       phi.current = lngToPhi(midLng(fromLng, toLng));
     }
 
-    // Build arcs (cobe v2: from/to as [lat, lng])
+    // Build arcs across all routes (cobe v2: from/to as [lat, lng])
     const arcs: Arc[] = [];
-    for (let i = 0; i < resolvedCoords.length - 1; i++) {
-      const from = resolvedCoords[i]!;
-      const to = resolvedCoords[i + 1]!;
-      arcs.push({
-        from: [from.coord[0], from.coord[1]],
-        to: [to.coord[0], to.coord[1]],
-        color: MATCHA_ARC,
-      });
+    for (const coords of resolvedRoutes) {
+      for (let i = 0; i < coords.length - 1; i++) {
+        const from = coords[i]!;
+        const to = coords[i + 1]!;
+        arcs.push({
+          from: [from[0], from[1]],
+          to: [to[0], to[1]],
+          color: MATCHA_ARC,
+        });
+      }
     }
 
-    // Markers at each airport in the route
-    const markers: COBEOptions['markers'] = resolvedCoords.map(({ coord: [lat, lng] }) => ({
-      location: [lat, lng],
-      size: 0.06,
-    }));
+    // Markers at every airport across all routes — dedupe by lat,lng
+    const markerSeen = new Set<string>();
+    const markers: COBEOptions['markers'] = [];
+    for (const coords of resolvedRoutes) {
+      for (const [lat, lng] of coords) {
+        const key = `${lat.toFixed(2)},${lng.toFixed(2)}`;
+        if (markerSeen.has(key)) continue;
+        markerSeen.add(key);
+        markers.push({ location: [lat, lng], size: 0.06 });
+      }
+    }
 
     const opts: COBEOptions = {
       devicePixelRatio: Math.min(window.devicePixelRatio, 2),
@@ -92,10 +119,16 @@ export function FlightGlobe({ route, className }: FlightGlobeProps) {
     globeRef.current?.destroy();
     globeRef.current = createGlobe(canvas, opts);
 
-    // Static render loop — no auto-rotation. The globe holds its
-    // orientation and only moves when the user drags. rAF is still needed
-    // so pointer-driven phi changes are reflected, but no passive motion.
-    function animate() {
+    // Render loop. By default the globe is static (only moves when dragged).
+    // When `autoRotate` is true, slowly drift phi — used by the home page
+    // world view where motion makes the multiple arcs feel alive.
+    let lastTs = 0;
+    function animate(ts: number) {
+      if (autoRotate && !dragging.current) {
+        const dt = lastTs ? Math.min((ts - lastTs) / 1000, 0.1) : 0;
+        phi.current += dt * 0.08; // slow drift
+      }
+      lastTs = ts;
       globeRef.current?.update({ phi: phi.current + dragDelta.current });
       rafRef.current = requestAnimationFrame(animate);
     }
@@ -107,7 +140,7 @@ export function FlightGlobe({ route, className }: FlightGlobeProps) {
       globeRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [route.join(',')]);
+  }, [allRoutes.map((r) => r.join(',')).join('|'), autoRotate]);
 
   return (
     <div
