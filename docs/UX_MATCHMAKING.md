@@ -1,9 +1,23 @@
 # UX — matchmaking
 
-**Status:** design anchor (not yet built)
+**Status:** **family side shipped** (2026-04-18) · companion side deliberately deferred (the existing home-page search feed already covers it passably).
 **Date:** 2026-04-18
 **Context:** freezes the shape of the match-discovery surface so whoever
 picks up the implementation has something to point at.
+
+## What's built (family side)
+
+- `/trip/[id]/matches` — curated shortlist page, up to 5 companion cards with evidence badge, review summary, verified-channel icons, bio snippet.
+- `components/matches/` — `companion-card.tsx`, `evidence-badge.tsx`, `intro-modal.tsx`.
+- `components/ui/dialog.tsx` — shadcn-style wrapper over `@radix-ui/react-dialog`.
+- Dashboard entry point — "See companions →" button on every open request trip.
+- Intro modal reuses the existing `sendMatchRequestAction` (same moderation + same `(trip, requester)` dedupe constraint).
+
+## Not yet built
+
+- **Companion side** — the spec's `/browse` mirror. The home page `/` already has FlightComposer + leg-based search + cards, which is functionally "flights that need help" — not as tight as the spec, but good enough pre-launch. Revisit after real user feedback rather than up-front.
+- **Per-companion help_categories** — the intro modal currently shows the family's help_categories read-only. Letting the family send a tailored subset per companion would need a `match_requests.help_categories` column. Out of scope here.
+- **Chain-of-companions** (BFS over trip_legs for pairs of helpers) — see [bugs/ALGORITHM.md](../bugs/ALGORITHM.md) upgrade #1. Supply-dependent; not a V1 concern.
 
 ---
 

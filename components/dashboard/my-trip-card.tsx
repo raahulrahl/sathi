@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { format, parseISO } from 'date-fns';
-import { ArrowRight, Share2, Users } from 'lucide-react';
+import { ArrowRight, Search, Share2, Users } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -59,7 +59,14 @@ export function MyTripCard({ trip, incoming }: MyTripCardProps) {
             {trip.airline ? ` · ${trip.airline}` : ''}
           </div>
         </div>
-        <div className="flex shrink-0 gap-2">
+        <div className="flex shrink-0 flex-wrap gap-2">
+          {isRequest && trip.status === 'open' && (
+            <Button asChild variant="slushie" size="sm">
+              <Link href={`/trip/${trip.id}/matches`}>
+                <Search className="mr-1 size-3.5" /> See companions
+              </Link>
+            </Button>
+          )}
           <Button asChild variant="outline" size="sm">
             <Link href={`/trip/${trip.id}`}>
               Open <ArrowRight className="ml-1 size-3.5" />
