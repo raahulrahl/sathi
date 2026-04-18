@@ -81,10 +81,11 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
   const youArePoster = userId === m.poster.id;
   const other = youArePoster ? m.requester : m.poster;
 
-  // Fetch travellers for this trip. Visible once matched (RLS: trip owner and
-  // the accepted requester are the only authenticated users who can read
-  // these rows — enforced at the DB layer via the 0013 migration's policy
-  // plus the match_requests status='accepted' join).
+  // Fetch travellers for this trip. Visible to the trip owner (via the
+  // "owner full access" policy from 0013) and to any authenticated user
+  // on an active/completed `matches` row for the trip (via the
+  // "match participants read" policy from 0015). Random authenticated
+  // users and anon see nothing.
   const { data: travellers } = await supabase
     .from('trip_travellers')
     .select('id, first_name, age_band, medical_notes, sort_order')
