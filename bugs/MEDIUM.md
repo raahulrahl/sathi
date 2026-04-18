@@ -152,6 +152,8 @@ cleanly; the UI can refetch and show "this trip is already matched."
 
 ## M07 — `blocks` table is defined but never consulted in RLS
 
+**Status:** ✅ FIXED in [supabase/migrations/0019_blocks_enforcement.sql](../supabase/migrations/0019_blocks_enforcement.sql) + [lib/notifications/enqueue.ts](../lib/notifications/enqueue.ts) (2026-04-18). Symmetric enforcement: if either party has blocked the other, new match_requests and new messages are refused at the RLS layer, and the notification enqueue filters the recipient out so blocked users don't generate inbox noise either. Historical matches/messages stay readable — the block only gates future writes. Content below preserved for history.
+
 **Files:** [supabase/migrations/0001_init.sql:193-199](../supabase/migrations/0001_init.sql),
 [supabase/migrations/0005_clerk.sql:224-230](../supabase/migrations/0005_clerk.sql)
 

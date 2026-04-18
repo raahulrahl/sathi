@@ -50,7 +50,24 @@ export async function enqueueMatchNotifications(
 
   // Unique recipient user_ids from matched trips (one user may own
   // multiple matching trips — we notify once, not per trip).
-  const recipientIds = Array.from(new Set(matches.map((m) => m.user_id)));
+  const candidateIds = Array.from(new Set(matches.map((m) => m.user_id)));
+
+  // Filter out any block relationship with the poster — symmetric.
+  // If either the poster blocked a candidate OR a candidate blocked the
+  // poster, that candidate doesn't receive a notification. Closes bug M07
+  // at the enqueue layer (RLS enforces the same on match_request inserts
+  // and message sends; this prevents the inbox noise separately).
+  const { data: blocks } = await supabase
+    .from('blocks')
+    .select('blocker_id, blocked_id')
+    .or(`blocker_id.eq.${newTrip.user_id},blocked_id.eq.${newTrip.user_id}`);
+
+  const forbidden = new Set<string>();
+  for (const b of blocks ?? []) {
+    forbidden.add(b.blocker_id === newTrip.user_id ? b.blocked_id : b.blocker_id);
+  }
+  const recipientIds = candidateIds.filter((id) => !forbidden.has(id));
+  if (recipientIds.length === 0) return { enqueued: 0, matched: matches.length };
 
   // Fetch contact channels for each recipient. A user with no email
   // AND no whatsapp number gets zero pending rows — nothing to send.
