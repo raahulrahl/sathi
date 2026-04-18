@@ -115,22 +115,25 @@ graph LR
     Browser([Browser])
 
     subgraph Vercel["Next.js 15 on Vercel"]
-        App[App Router<br/>pages + Server Actions]
+        App[App Router · Server Actions<br/>shadcn/ui · Tailwind · Zod]
         Matches["/trip/:id/matches<br/>shortlist page"]
         Cron[Vercel Cron<br/>every minute / daily]
     end
 
     subgraph Supabase["Supabase · Postgres + RLS"]
-        DB[(trips · matches<br/>trip_legs · queue)]
+        DB[(trips · matches · trip_legs<br/>pending_notifications<br/>FOR UPDATE SKIP LOCKED)]
     end
 
-    Clerk[Clerk<br/>auth / JWT]
+    Clerk[Clerk<br/>auth · JWT]
 
     subgraph External["External services"]
-        Resend[Resend<br/>email digests]
-        Twilio[Twilio<br/>WhatsApp OTP]
-        AirLabs[AirLabs<br/>flight routes]
+        Resend[Resend · email digests]
+        Twilio[Twilio · WhatsApp OTP + Lookup]
+        AirLabs[AirLabs · flight routes]
+        OpenAI[OpenAI · moderation]
     end
+
+    Observability[Sentry · errors<br/>PostHog · flags<br/>Vercel Analytics]
 
     Browser --> App
     Browser --> Matches
@@ -138,30 +141,15 @@ graph LR
     Clerk -->|verified JWT| DB
     App -->|RLS-gated queries| DB
     App -->|enqueue pending_notifications| DB
+    App -->|OTP verify| Twilio
+    App -->|moderate notes + intros| OpenAI
+    App -->|cache miss| AirLabs
     Cron -->|claim + dispatch| DB
     Cron -->|send| Resend
-    Cron -->|send| Twilio
-    App -->|cache miss| AirLabs
+    App -.-> Observability
 ```
 
-| Layer         | Stack                                                                |
-| ------------- | -------------------------------------------------------------------- |
-| Framework     | Next.js 15 (App Router, Server Actions, Server Components)           |
-| Auth          | Clerk → Supabase RLS via Third-Party Auth JWT                        |
-| Database      | Supabase Postgres + Row-Level Security                               |
-| Matching      | Leg-based graph (`trip_legs`) with composite and partial indexes     |
-| UI            | shadcn/ui + Tailwind CSS + Radix primitives                          |
-| Validation    | Zod + react-hook-form                                                |
-| Phone         | libphonenumber-js + Twilio Lookup + Twilio Messages (WhatsApp OTP)   |
-| Notifications | Postgres queue with `FOR UPDATE SKIP LOCKED` dispatch + daily digest |
-| Email         | Resend                                                               |
-| Moderation    | OpenAI moderation + PII-pattern regex at submit                      |
-| Rate limiting | Postgres-backed per-user token bucket                                |
-| Errors        | Sentry                                                               |
-| Analytics     | Vercel Analytics + Speed Insights                                    |
-| Feature flags | PostHog via `@flags-sdk/posthog`                                     |
-| Hosting       | Vercel                                                               |
-| Tooling       | pnpm · Vitest · ESLint · Prettier · Husky · commitlint               |
+_Tooling_: pnpm · Vitest · ESLint · Prettier · Husky · commitlint.
 
 ---
 
