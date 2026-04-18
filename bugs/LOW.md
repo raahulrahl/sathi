@@ -43,6 +43,8 @@ for owners to deactivate) or remove the filter.
 
 ## L04 — `user.deleted` Clerk event isn't handled
 
+**Status:** ✅ FIXED in [app/api/clerk-webhook/route.ts](../app/api/clerk-webhook/route.ts) (2026-04-18). Added a `user.deleted` branch that drops the `profiles` row. Every FK into `profiles` is declared `ON DELETE CASCADE`, so all downstream rows follow automatically. Content below preserved for history.
+
 **File:** [app/api/clerk-webhook/route.ts:94-144](../app/api/clerk-webhook/route.ts)
 
 When a user deletes their Clerk account, the `profiles` row remains with

@@ -143,6 +143,23 @@ export async function POST(request: NextRequest) {
     void providerToChannel; // keep ref for future re-use
   }
 
+  // user.deleted: drop the profiles row. Every FK into profiles is
+  // declared ON DELETE CASCADE, so trips, matches, messages, reviews,
+  // reports, blocks, verifications, trip_travellers, trip_legs, and
+  // pending_notifications all follow automatically. No orphan rows,
+  // no extra cleanup code. Closes bug L04 and keeps the door open
+  // for a future "delete my account" / GDPR-erasure feature.
+  if (event.type === 'user.deleted') {
+    const u = event.data as { id?: string; deleted?: boolean };
+    if (!u.id) {
+      return NextResponse.json({ error: 'user.id missing' }, { status: 400 });
+    }
+    const { error } = await supabase.from('profiles').delete().eq('id', u.id);
+    if (error) {
+      return NextResponse.json({ error: `profile delete: ${error.message}` }, { status: 500 });
+    }
+  }
+
   // session.created and everything else: ignored for now.
   return NextResponse.json({ ok: true });
 }
