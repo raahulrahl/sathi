@@ -1,5 +1,6 @@
 # 02 — Partial-leg helpers never match (the DOH→AMS student case)
 
+**Status:** ✅ FIXED structurally in [supabase/migrations/0016_trip_legs.sql](../supabase/migrations/0016_trip_legs.sql) + [lib/search.ts](../lib/search.ts) + [lib/auto-match.ts](../lib/auto-match.ts) (2026-04-18). Content below preserved for history.
 **Severity:** HIGH
 **Area:** search / matching
 **Found:** 2026-04-18

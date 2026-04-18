@@ -50,6 +50,16 @@ describe('routeMatch', () => {
   it('recognises one-leg overlap on origin', () => {
     expect(routeMatch(['CCU', 'DEL'], 'CCU', 'AMS')).toBe('one-leg');
   });
+  it('recognises partial-leg helper on destination', () => {
+    // Student flying only DOH→AMS helping a family on CCU→DOH→AMS.
+    // Destination AMS appears as arrival — one-leg partial overlap.
+    expect(routeMatch(['DOH', 'AMS'], 'CCU', 'AMS')).toBe('one-leg');
+  });
+  it('rejects reverse-direction routes', () => {
+    // Student flying home AMS→DOH→CCU can't help a CCU→AMS search.
+    expect(routeMatch(['AMS', 'DOH', 'CCU'], 'CCU', 'AMS')).toBe('none');
+    expect(routeMatch(['AMS', 'CCU'], 'CCU', 'AMS')).toBe('none');
+  });
   it('returns none when there is no overlap', () => {
     expect(routeMatch(['PVG', 'FRA'], 'CCU', 'AMS')).toBe('none');
   });
@@ -151,19 +161,26 @@ describe('rankTrips — flight-number filter is strict', () => {
     expect(result.map((r) => r.trip.id)).toEqual(['match']);
   });
 
-  it('date window is ignored when flight filter is in use', () => {
+  it('still applies the date window when a flight filter is in use', () => {
+    // QR540 is a daily flight. Same number on a different day = different
+    // airframe — so the match must also be inside the date window.
     const flightMatchFarAway: RankableTrip = {
       ...base,
       id: 'flight-match-far',
       flight_numbers: ['QR540'],
-      travel_date: '2026-05-10', // 20 days away, would fail date filter
+      travel_date: '2026-05-10', // 20 days away — outside the ±1 window
     };
-    const result = rankTrips([flightMatchFarAway], {
+    const flightMatchInWindow: RankableTrip = {
+      ...base,
+      id: 'flight-match-in-window',
+      flight_numbers: ['QR540'],
+      travel_date: '2026-04-20',
+    };
+    const result = rankTrips([flightMatchFarAway, flightMatchInWindow], {
       ...criteria,
       flightNumbers: ['QR540'],
     });
-    expect(result).toHaveLength(1);
-    expect(result[0]!.trip.id).toBe('flight-match-far');
+    expect(result.map((r) => r.trip.id)).toEqual(['flight-match-in-window']);
   });
 });
 

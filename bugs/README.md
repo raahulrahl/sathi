@@ -27,13 +27,13 @@ fix for bug #02 and the scalability path forward — lives in `ALGORITHM.md`.
 
 ### HIGH
 
-| #    | Title                                                                                      | File                                                                 |
-| ---- | ------------------------------------------------------------------------------------------ | -------------------------------------------------------------------- |
-| ✅01 | `trip_travellers` RLS blocks matched companion from seeing traveller PII _(fixed in 0015)_ | [01-trip-travellers-rls.md](01-trip-travellers-rls.md)               |
-| 02   | Partial-leg helpers never match (the DOH→AMS student case)                                 | [02-partial-leg-helpers.md](02-partial-leg-helpers.md)               |
-| 03   | `routeMatch()` is direction-blind — return-leg travelers score as "endpoints"              | [03-route-direction.md](03-route-direction.md)                       |
-| 04   | Flight-number matching ignores travel date — same number, different day, different plane   | [04-flight-number-ignores-date.md](04-flight-number-ignores-date.md) |
-| 05   | `/api/cron/auto-complete` auth fails open when `CRON_SECRET` unset                         | [05-cron-auth-fails-open.md](05-cron-auth-fails-open.md)             |
+| #    | Title                                                                                              | File                                                                 |
+| ---- | -------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| ✅01 | `trip_travellers` RLS blocks matched companion from seeing traveller PII _(fixed in 0015)_         | [01-trip-travellers-rls.md](01-trip-travellers-rls.md)               |
+| ✅02 | Partial-leg helpers never match (the DOH→AMS student case) _(fixed in 0016 + lib)_                 | [02-partial-leg-helpers.md](02-partial-leg-helpers.md)               |
+| ✅03 | `routeMatch()` is direction-blind — return-leg travellers score as "endpoints" _(fixed)_           | [03-route-direction.md](03-route-direction.md)                       |
+| ✅04 | Flight-number matching ignores travel date — same number, different day, different plane _(fixed)_ | [04-flight-number-ignores-date.md](04-flight-number-ignores-date.md) |
+| 05   | `/api/cron/auto-complete` auth fails open when `CRON_SECRET` unset                                 | [05-cron-auth-fails-open.md](05-cron-auth-fails-open.md)             |
 
 ### MEDIUM & LOW
 

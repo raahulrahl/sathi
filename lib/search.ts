@@ -67,23 +67,30 @@ export async function fetchViewerProfile(
 export interface TripQueryParams {
   from: string;
   to: string;
-  /** ISO YYYY-MM-DD. Ignored when flightNumbers is non-empty. */
+  /** ISO YYYY-MM-DD. Always applied — a ±dateWindowDays window. */
   date: string;
   flightNumbers: string[];
   dateWindowDays?: number;
 }
 
 /**
- * Run the public_trips query for a given route + date / flight numbers.
- * Two modes:
+ * Find trips worth showing to a searcher looking for help on a leg
+ * from `from` to `to` around `date`.
  *
- *   - flightNumbers non-empty: strict exact-flight match via GIN index
- *     overlap. Date is ignored — flight number is already more specific.
- *   - flightNumbers empty: same route within ±dateWindowDays of `date`.
+ * Matching runs on `trip_legs` (added in migration 0016) in two steps:
  *
- * Always filters to status='open' (closed trips shouldn't surface).
- * Returns the raw trips array; call `enrichTripsWithProfiles` next to
- * attach display data.
+ *   1. SQL narrows the candidate set to trips whose legs overlap the
+ *      searcher's implied leg — same (flight_number, date) where
+ *      provided, else any leg with origin=from OR destination=to within
+ *      ±dateWindowDays. This surfaces partial-leg helpers that the
+ *      previous `contains(route, [from]) AND contains(route, [to])`
+ *      filter silently dropped (bug 02).
+ *   2. `lib/matching.ts::scoreTrip` does the final ranking in-memory
+ *      using route / language / review signals.
+ *
+ * Always filters to status='open'. The date window applies to both
+ * modes — flight numbers alone don't disambiguate, since QR540 is a
+ * daily flight with a different airframe each day (bug 04).
  */
 export async function fetchTripsForSearch(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -93,24 +100,54 @@ export async function fetchTripsForSearch(
   const windowDays = params.dateWindowDays ?? DEFAULT_DATE_WINDOW_DAYS;
   const { start, end } = dateWindow(params.date, windowDays);
 
-  let query = supabase
+  // ── Step 1. Gather candidate trip_ids from trip_legs. ──────────────
+  const candidateIds = new Set<string>();
+
+  if (params.flightNumbers.length > 0) {
+    const { data: flightHits } = await supabase
+      .from('trip_legs')
+      .select('trip_id')
+      .in('flight_number', params.flightNumbers)
+      .gte('travel_date', start)
+      .lte('travel_date', end);
+    for (const row of flightHits ?? []) candidateIds.add(row.trip_id);
+  }
+
+  // origin=from OR destination=to — covers end-to-end matches AND
+  // partial-leg helpers (a companion on just the DOH→AMS leg of a
+  // CCU→DOH→AMS request shows up via destination=AMS).
+  const { data: odHits } = await supabase
+    .from('trip_legs')
+    .select('trip_id')
+    .or(`origin.eq.${params.from},destination.eq.${params.to}`)
+    .gte('travel_date', start)
+    .lte('travel_date', end);
+  for (const row of odHits ?? []) candidateIds.add(row.trip_id);
+
+  // No candidates? Return a Supabase-shaped empty result so callers
+  // that destructure `{ data, error }` keep working.
+  if (candidateIds.size === 0) {
+    return { data: [] as unknown[], error: null } as Awaited<ReturnType<typeof buildTripSelect>>;
+  }
+
+  // ── Step 2. Fetch the candidate trips with full display columns. ───
+  return buildTripSelect(supabase, Array.from(candidateIds));
+}
+
+function buildTripSelect(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: SupabaseClient<any, any, any>,
+  tripIds: string[],
+) {
+  return supabase
     .from('public_trips')
     .select(
       `id, user_id, kind, route, travel_date, airline, flight_numbers,
        languages, gender_preference, help_categories, thank_you_eur, notes,
        status, traveller_age_bands, traveller_count, created_at`,
     )
-    .eq('status', 'open')
-    .contains('route', [params.from])
-    .contains('route', [params.to]);
-
-  if (params.flightNumbers.length > 0) {
-    query = query.overlaps('flight_numbers', params.flightNumbers);
-  } else {
-    query = query.gte('travel_date', start).lte('travel_date', end);
-  }
-
-  return query;
+    .in('id', tripIds)
+    .eq('status', 'open');
 }
 
 /** Minimal profile shape needed to render a trip card. */

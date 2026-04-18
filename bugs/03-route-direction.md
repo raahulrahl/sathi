@@ -1,5 +1,6 @@
 # 03 — `routeMatch()` is direction-blind
 
+**Status:** ✅ FIXED in [lib/matching.ts](../lib/matching.ts) (`routeMatch` rewritten to use `indexOf` ordering; tests added in [lib/matching.test.ts](../lib/matching.test.ts)) (2026-04-18). Content below preserved for history.
 **Severity:** HIGH
 **Area:** matching
 **Found:** 2026-04-18

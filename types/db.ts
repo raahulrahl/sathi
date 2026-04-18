@@ -68,6 +68,17 @@ export interface TripTravellersRow {
   created_at: string;
 }
 
+export interface TripLegsRow {
+  id: string;
+  trip_id: string;
+  leg_index: number;
+  origin: string;
+  destination: string;
+  travel_date: string;
+  flight_number: string | null;
+  created_at: string;
+}
+
 export interface MatchRequestsRow {
   id: string;
   trip_id: string;
@@ -268,6 +279,12 @@ export interface Database {
         Row: TripTravellersRow;
         Insert: InsertOf<TripTravellersRow, 'id' | 'created_at' | 'sort_order'>;
         Update: UpdateOf<TripTravellersRow>;
+        Relationships: [];
+      };
+      trip_legs: {
+        Row: TripLegsRow;
+        Insert: InsertOf<TripLegsRow, 'id' | 'created_at'>;
+        Update: UpdateOf<TripLegsRow>;
         Relationships: [];
       };
     };

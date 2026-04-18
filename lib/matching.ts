@@ -81,22 +81,23 @@ export function routeMatch(
   destination: string,
 ): Scored['routeMatch'] {
   if (tripRoute.length < 2) return 'none';
-  const start = tripRoute[0]!;
-  const end = tripRoute[tripRoute.length - 1]!;
-  if (start === origin && end === destination) {
-    return tripRoute.length === 2 ? 'exact' : 'endpoints';
-  }
-  if (tripRoute.includes(origin) && tripRoute.includes(destination)) {
+  const oIdx = tripRoute.indexOf(origin);
+  const dIdx = tripRoute.indexOf(destination);
+  const inOrder = oIdx !== -1 && dIdx !== -1 && dIdx > oIdx;
+
+  if (inOrder) {
+    const sameEndpoints = oIdx === 0 && dIdx === tripRoute.length - 1;
+    if (sameEndpoints) return tripRoute.length === 2 ? 'exact' : 'endpoints';
     return 'endpoints';
   }
-  if (
-    start === origin ||
-    end === destination ||
-    tripRoute.includes(origin) ||
-    tripRoute.includes(destination)
-  ) {
+
+  // One-leg overlap: origin appears as a departure (not the final
+  // airport), OR destination appears as an arrival (not the first).
+  // Direction-safe: a reverse-leg traveller doesn't satisfy either.
+  if ((oIdx !== -1 && oIdx < tripRoute.length - 1) || (dIdx !== -1 && dIdx > 0)) {
     return 'one-leg';
   }
+
   return 'none';
 }
 
@@ -175,11 +176,12 @@ export function scoreTrip<T extends RankableTrip>(trip: T, criteria: SearchCrite
 
 /**
  * Filter + rank trips.
- *   - If `criteria.flightNumbers` is non-empty, only trips with at least one
- *     matching flight number pass. Date window is ignored in this mode —
- *     flight numbers already uniquely identify the departure.
- *   - Otherwise, trips must fall within `criteria.dateWindowDays` of the
- *     requested date.
+ *
+ * The date window applies in both modes — a flight number alone does
+ * not identify a specific aircraft (QR540 is a daily flight; same
+ * number on different days = different plane). When flightNumbers is
+ * provided, trips must match both the date window AND at least one
+ * flight number.
  */
 export function rankTrips<T extends RankableTrip>(
   trips: readonly T[],
@@ -189,10 +191,11 @@ export function rankTrips<T extends RankableTrip>(
 
   return trips
     .filter((t) => {
+      if (dayDiff(t.travel_date, criteria.date) > criteria.dateWindowDays) return false;
       if (usingFlightFilter) {
         return matchingFlightNumbers(t.flight_numbers, criteria.flightNumbers).length > 0;
       }
-      return dayDiff(t.travel_date, criteria.date) <= criteria.dateWindowDays;
+      return true;
     })
     .map((t) => scoreTrip(t, criteria))
     .sort((a, b) => b.score - a.score);
