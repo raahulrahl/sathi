@@ -39,6 +39,10 @@ There are tens of thousands of solo travellers on the same flight, doing nothing
 
 We don't run the trip. We don't take a cut. We make the introduction, then get out of the way.
 
+<p align="center">
+  <img src="public/home.png" alt="Saathi home page — search for a companion on your flight" width="900">
+</p>
+
 ## Features
 
 - **Leg-based matching** — a student flying only the Doha→Amsterdam leg of a larger itinerary can help your parent on that transfer, even if they're not on the full route. Matches compute on directed flight legs, not whole itineraries.
