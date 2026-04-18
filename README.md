@@ -1,56 +1,50 @@
+<p align="center">
+  <img src="https://getsaathi.com/opengraph-image" alt="Saathi — a companion on the flight home" width="100%">
+</p>
+
 <div align="center">
 
 # Saathi
 
-**साथी** — _companion_
+**साथी** — _companion · partner · friend on the journey_
 
-A matchmaking platform pairing travellers who'd welcome a hand — an elderly parent, a pregnant sibling, a first-time flyer — with people already on the same flight who can keep them company through security, transfers, and arrival.
+**Nobody flies alone.**
 
-[**getsaathi.com**](https://getsaathi.com) · [Report a bug](https://github.com/getsaathi/saathi/issues/new) · [Request a feature](https://github.com/getsaathi/saathi/issues/new)
+The open-source matchmaking platform for cross-border family travel.<br/>
+Pair a parent, a pregnant traveller, or a first-time flyer with someone already on the same plane who can walk them through transfers, translate at the gate, and make sure they get home.
 
+[![CI](https://github.com/raahulrahl/saathi/actions/workflows/ci.yml/badge.svg)](https://github.com/raahulrahl/saathi/actions/workflows/ci.yml)
+[![GitHub stars](https://img.shields.io/github/stars/raahulrahl/saathi?style=flat)](https://github.com/raahulrahl/saathi/stargazers)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
-[![Next.js](https://img.shields.io/badge/Next.js-15-black?logo=next.js)](https://nextjs.org)
-[![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](#contributing)
+[![Next.js 15](https://img.shields.io/badge/Next.js-15-black?logo=next.js)](https://nextjs.org)
+[![TypeScript strict](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
+
+[Website](https://getsaathi.com) · [Report a bug](https://github.com/raahulrahl/saathi/issues/new) · [Request a feature](https://github.com/raahulrahl/saathi/issues/new) · [Contributing](#contributing)
+
+**English** | हिन्दी _(soon)_ | বাংলা _(soon)_
 
 </div>
 
----
-
-## Why this exists
+## What is Saathi?
 
 Every diaspora family knows the call: a parent flying alone, a long layover, an unfamiliar terminal, a language they only half-speak. We wait for them to message that they've found the gate. We don't sleep until they do.
 
-There are tens of thousands of solo travellers on the same flight, doing nothing in particular for those eight hours. Saathi puts those two people in touch a few weeks before the flight, sets up an introduction, and lets the family stop holding their breath at 3 AM.
+There are tens of thousands of solo travellers on the same flight, doing nothing in particular for those eight hours. **Saathi puts those two people in touch a few weeks before the flight**, sets up an introduction, and lets the family stop holding their breath at 3 AM.
 
 We don't run the trip. We don't take a cut. We make the introduction, then get out of the way.
 
-## How it works
+## Features
 
-- **Families** post a request: route, date, languages the parent speaks, what kind of help they'd appreciate.
-- **Companions** post offers when they're flying somewhere anyway, or browse open requests on routes they fly often.
-- **Search ranks by language match first**, then date proximity, then route specificity. The parent who only speaks Bengali should not be matched with someone who can only manage English.
-- **Verification is lightweight**: WhatsApp number (Twilio OTP) plus social profile URLs. We previously gated posting behind multiple OAuth links and dropped that — the friction outweighed the trust signal.
-- **Saathi never touches money.** Any thank-you is settled directly between family and companion.
+- **Leg-based matching** — a student flying only the Doha→Amsterdam leg of a larger itinerary can help your parent on that transfer, even if they're not on the full route. Matches compute on directed flight legs, not whole itineraries.
+- **Language-first ranking** — primary-language match beats route match beats date proximity. A Bengali-speaking parent isn't served by an English-only companion.
+- **Verified identity, lightweight** — WhatsApp OTP (Twilio) + social profile URLs. Enough accountability to trust a stranger with your mother; not so much friction that nobody signs up.
+- **Curated shortlist, not swipe feed** — families see the top 3-5 companions for their specific flight, each card answering _"why this person?"_ in one line (`● Also on QR540 + QR23`).
+- **Private by default** — contact details unlock only after an accepted match. Notes moderated at submit; phone and email patterns are blocked to prevent bypassing the match gate.
+- **Durable notification queue** — Postgres-backed, atomic claim via `FOR UPDATE SKIP LOCKED`, per-recipient daily digest so a popular route doesn't flood anyone's inbox.
 
-## Stack
+---
 
-| Layer         | What we use                                                        |
-| ------------- | ------------------------------------------------------------------ |
-| Framework     | Next.js 15 (App Router, Server Actions, Server Components)         |
-| Auth          | Clerk (Third-Party Auth → Supabase RLS)                            |
-| Database      | Supabase Postgres + RLS + Storage                                  |
-| UI            | shadcn/ui + Tailwind CSS + Radix primitives                        |
-| Validation    | Zod + react-hook-form                                              |
-| Phone         | libphonenumber-js + Twilio Lookup + Twilio Messages (WhatsApp OTP) |
-| Rate limiting | Upstash Redis + `@upstash/ratelimit`                               |
-| Errors        | Sentry                                                             |
-| Analytics     | Vercel Analytics + Speed Insights                                  |
-| Feature flags | PostHog via `@flags-sdk/posthog`                                   |
-| Hosting       | Vercel                                                             |
-| Tooling       | pnpm · Vitest · ESLint · Prettier · Husky · commitlint             |
-
-## Quick start
+## Quick Start
 
 ```bash
 # 1. Use the pinned Node version (.nvmrc → 20.18.x)
@@ -67,88 +61,141 @@ cp .env.example .env.local
 pnpm dev    # http://localhost:3000
 ```
 
-A few env vars are optional in dev (Sentry, Twilio, PostHog) and the code is built to fail-soft when they're missing — features that depend on them disable themselves rather than crash. Look for `.env.example` for the full list and what each one unlocks.
+Optional env vars (Sentry, Twilio, PostHog, Resend, AirLabs, OpenAI) are read lazily — features that depend on a missing key disable themselves rather than crash. See [`.env.example`](.env.example) for the full list and what each one unlocks.
 
-## Repo layout
+---
+
+## How it works
+
+### 1. A family posts a request
+
+Route (IATA codes), date, languages the parent speaks, what kind of help is welcome — wheelchair at transfers, translation at immigration, wayfinding between gates. Up to four travellers per trip if they're flying together.
+
+### 2. A companion matches
+
+Either they posted an offer for that route already, or the family sees them on the shortlist and sends an intro. All contact stays behind the match gate until the family accepts.
+
+### 3. They agree on the handoff
+
+After accept, both sides get WhatsApp and email. They coordinate the details — meeting at the gate, what the parent looks like, what help they'd like. Saathi stays out of it.
+
+### 4. The flight happens
+
+Someone walks the parent through immigration. Someone sits with them at boarding. Someone helps them find luggage at arrivals. The family stops holding their breath.
+
+---
+
+## Architecture
+
+```
+┌──────────────┐     ┌────────────────┐     ┌──────────────────┐
+│  Next.js 15  │────>│     Clerk      │     │    Supabase      │
+│  App Router  │     │  (auth / JWT)  │────>│ Postgres + RLS   │
+└──────┬───────┘     └────────────────┘     └──────┬───────────┘
+       │                                           │
+       ├──────────────────────┬──────────────┬─────┤
+       │                      │              │     │
+┌──────▼──────┐  ┌────────────▼───┐  ┌───────▼──┐  │
+│ /matches    │  │ notification   │  │ trip_legs│  │
+│ shortlist   │  │ queue (cron)   │  │  graph   │  │
+└─────────────┘  └───────┬────────┘  └──────────┘  │
+                         │                         │
+               ┌─────────┴─────────┐               │
+           ┌───▼────┐         ┌────▼─────┐    ┌────▼─────┐
+           │ Resend │         │ Twilio   │    │ AirLabs  │
+           │ email  │         │ WhatsApp │    │ flights  │
+           └────────┘         └──────────┘    └──────────┘
+```
+
+| Layer         | Stack                                                                |
+| ------------- | -------------------------------------------------------------------- |
+| Framework     | Next.js 15 (App Router, Server Actions, Server Components)           |
+| Auth          | Clerk → Supabase RLS via Third-Party Auth JWT                        |
+| Database      | Supabase Postgres + Row-Level Security                               |
+| Matching      | Leg-based graph (`trip_legs`) with composite and partial indexes     |
+| UI            | shadcn/ui + Tailwind CSS + Radix primitives                          |
+| Validation    | Zod + react-hook-form                                                |
+| Phone         | libphonenumber-js + Twilio Lookup + Twilio Messages (WhatsApp OTP)   |
+| Notifications | Postgres queue with `FOR UPDATE SKIP LOCKED` dispatch + daily digest |
+| Email         | Resend                                                               |
+| Moderation    | OpenAI moderation + PII-pattern regex at submit                      |
+| Rate limiting | Postgres-backed per-user token bucket                                |
+| Errors        | Sentry                                                               |
+| Analytics     | Vercel Analytics + Speed Insights                                    |
+| Feature flags | PostHog via `@flags-sdk/posthog`                                     |
+| Hosting       | Vercel                                                               |
+| Tooling       | pnpm · Vitest · ESLint · Prettier · Husky · commitlint               |
+
+---
+
+## Repository layout
 
 ```
 app/
-  (marketing)/             landing, about, faq
-  search/                  public browse + rank
-  trip/[id]/               public trip detail + send-request flow
-  profile/[id]/            public profile
-  post/{request,offer}/    auth-gated posting wizard (one for each side)
-  onboarding/              single-form profile setup + WhatsApp OTP
-  dashboard/               my trips · incoming · sent · matches
-  match/[id]/              match thread (chat + reviews coming)
-  auth/                    Clerk-driven sign-in / sign-up
+  (marketing)/              landing, FAQ
+  trip/[id]/
+    matches/                family-side shortlist page
+    request/                send-a-request fallback form
+  profile/[id]/             public profile
+  post/{request,offer}/     auth-gated posting wizard
+  onboarding/               single-form profile setup + WhatsApp OTP
+  dashboard/                my trips · incoming · sent · matches
+  match/[id]/               match thread (chat + reviews coming)
   api/
-    verify/whatsapp/       Twilio Messages OTP start + check
-    cron/auto-complete/    48h auto-complete job for finished trips
-    clerk-webhook/         Svix-verified user.created sync
-  icon.tsx                 Generated favicon (next/og)
-  apple-icon.tsx           Generated Apple touch icon
-  opengraph-image.tsx      Default 1200×630 OG card
-  robots.ts · sitemap.ts   Crawler hints + canonical URL list
+    verify/whatsapp/        Twilio OTP start + check
+    flights/lookup/         AirLabs flight lookup (auth + rate-limited)
+    cron/
+      auto-complete/        48h auto-complete cron (daily 03:00 UTC)
+      send-notifications/   queue drainer (every minute)
+    clerk-webhook/          user.created / updated / deleted sync
 
 components/
-  ui/                      shadcn primitives
-  flight-composer/         the unified search/post entry component
-  trip-card · route-line · language-chip · …
+  matches/                  shortlist cards + intro modal
+  dashboard/                trip + match + request cards
+  ui/                       shadcn primitives (incl. dialog)
 
 lib/
-  matching.ts              ranking function + Vitest suite
-  search.ts                server-side search helpers
-  iata.ts                  IATA airport data (~500 airports)
-  languages.ts             curated language + help-category lists
-  supabase/                server / client / middleware factories
-  whatsapp-auth.ts         Twilio Messages OTP, hashed in Supabase
-  rate-limit.ts            Upstash sliding-window helper
-  site.ts                  canonical origin helper
+  matching.ts               ranking function + Vitest suite
+  search.ts                 server-side search helpers
+  notifications/            durable queue (enqueue + dispatch)
+  rate-limit.ts             Postgres-backed per-user limiter
+  iata.ts · languages.ts    curated vocab
 
-supabase/migrations/       SQL schema, RLS, triggers, views (numbered)
-flags.ts                   PostHog flag adapter + identify
+supabase/migrations/        SQL schema, RLS, triggers, views (0001–0023)
+bugs/                       pre-launch code review + issue tracker
+docs/                       UX and architecture notes
 ```
 
-## Database
-
-SQL migrations live under `supabase/migrations/` and are append-only. The schema is shaped around four nouns: **profiles**, **trips**, **match_requests**, and **matches**. Reads from anonymous traffic go through three views (`public_profiles`, `public_trips`, `profile_review_stats`) so RLS stays simple and PII stays redacted.
-
-```bash
-pnpm db:reset       # local: re-apply all migrations from scratch
-pnpm db:push        # push pending migrations to a linked project
-pnpm db:types       # regenerate types/db.ts (when a project is linked)
-```
-
-The most recent migrations document their reasoning at the top — start there if you want to understand a column choice rather than guessing.
+---
 
 ## Scripts
 
-| Script              | What it does                                                        |
-| ------------------- | ------------------------------------------------------------------- |
-| `pnpm dev`          | Next.js dev server                                                  |
-| `pnpm build`        | Production build (also runs Sentry source-map upload if configured) |
-| `pnpm lint`         | ESLint (Next + Tailwind + unused-imports)                           |
-| `pnpm format`       | Prettier write                                                      |
-| `pnpm format:check` | Prettier check (CI)                                                 |
-| `pnpm typecheck`    | `tsc --noEmit`                                                      |
-| `pnpm test`         | Vitest run (`pnpm test:watch` for watch mode)                       |
-| `pnpm db:types`     | Regenerate `types/db.ts` from a linked Supabase project             |
-| `pnpm db:reset`     | Reset local Supabase + re-apply migrations                          |
-| `pnpm db:push`      | Push pending migrations to remote                                   |
+| Script                              | What it does                                                |
+| ----------------------------------- | ----------------------------------------------------------- |
+| `pnpm dev`                          | Next.js dev server                                          |
+| `pnpm build`                        | Production build (uploads Sentry source maps if configured) |
+| `pnpm lint`                         | ESLint                                                      |
+| `pnpm format` / `pnpm format:check` | Prettier write / check                                      |
+| `pnpm typecheck`                    | `tsc --noEmit`                                              |
+| `pnpm test`                         | Vitest run (`pnpm test:watch` for watch mode)               |
+| `pnpm db:types`                     | Regenerate `types/db.ts` from linked Supabase project       |
+| `pnpm db:reset`                     | Reset local Supabase + re-apply migrations                  |
+| `pnpm db:push`                      | Push pending migrations to remote                           |
+
+---
 
 ## Contributing
 
 Saathi is open source and contributions are warmly welcome — code, design, copy edits, translations, bug reports, all of it.
 
-**Before you start a non-trivial change**, please open an issue (or comment on an existing one) so we can sanity-check the direction together. Saves wasted work on either side.
+**Before a non-trivial change**, open an issue (or comment on an existing one) so we can sanity-check direction together. Saves wasted work on either side.
 
-A few conventions:
+Conventions:
 
-- **Trunk-based.** PRs target `main`. No long-lived feature branches.
-- **Conventional Commits.** Enforced by `commitlint` via a Husky `commit-msg` hook. Examples: `feat(search): add airline filter`, `fix(otp): handle expired codes`.
-- **Tests where they matter.** Pure logic (matching, parsing) gets unit tests. UI changes are validated by running them locally — type-check + lint + build is the floor before opening a PR.
-- **One thing per PR.** A bug fix doesn't need surrounding cleanup. A feature doesn't need extra configurability. Small PRs land faster.
+- **Trunk-based.** PRs target `main`. No long-lived branches.
+- **Conventional Commits.** Enforced by `commitlint` via a Husky `commit-msg` hook.
+- **Tests where they matter.** Pure logic (matching, parsing) gets unit tests. UI changes are validated locally.
+- **One thing per PR.** Small PRs land faster.
 
 Run the floor before pushing:
 
@@ -156,22 +203,41 @@ Run the floor before pushing:
 pnpm typecheck && pnpm lint && pnpm test && pnpm build
 ```
 
+The live code-review + issue tracker lives in [`bugs/`](bugs), and the UX design anchor in [`docs/UX_MATCHMAKING.md`](docs/UX_MATCHMAKING.md).
+
+---
+
 ## Roadmap
 
-The big-rock items not yet built (intentional — we wanted the public surface working first):
+- **In-app chat** for matched pairs (currently fall back to WhatsApp/email).
+- **Reviews UI** — table + RLS exist; the form ships with chat.
+- **Trip photo uploads** + consent flow.
+- **Admin / moderation panel** — reports table exists, UI doesn't.
+- **Companion-side shortlist** — mirror of `/trip/[id]/matches` for companions browsing requests.
+- **Connecting-flight chaining** — two companions covering consecutive legs. See [`bugs/ALGORITHM.md`](bugs/ALGORITHM.md).
 
-- In-app chat for matched pairs (currently fall back to direct WhatsApp/email)
-- Reviews UI (table + RLS exist; the form ships with chat)
-- Trip photo uploads + consent flow
-- Admin / moderation panel (reports table exists, no UI yet)
-- Public `/terms`, `/privacy`, `/report` pages
+---
 
-Open issues track the smaller stuff. If you want to claim something, comment "I'll take this."
+## Star History
+
+<a href="https://www.star-history.com/?repos=raahulrahl%2Fsaathi&type=date">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=raahulrahl/saathi&type=Date&theme=dark" />
+    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=raahulrahl/saathi&type=Date" />
+    <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=raahulrahl/saathi&type=Date" />
+  </picture>
+</a>
+
+---
 
 ## License
 
-Apache License 2.0 — see [LICENSE](LICENSE) for the full text. You can use, modify, and ship Saathi freely; please keep the copyright + license notice on derivative work.
+Apache License 2.0 — see [LICENSE](LICENSE) for the full text. Use, modify, and ship Saathi freely; please keep the copyright and license notice on derivative work.
+
+---
 
 ## A note on the name
 
-**Saathi (साथी)** in Hindi, Bengali, Marathi, Punjabi, and several other Indian languages means _companion_, _partner_, _friend on the journey_. It's the word a parent might use for the person who walks them through a confusing terminal. That's the whole product.
+**Saathi (साथी)** in Hindi, Bengali, Marathi, Punjabi, and several other Indian languages means _companion_, _partner_, _friend on the journey_. It's the word a parent might use for the person who walks them through a confusing terminal.
+
+That's the whole product.
