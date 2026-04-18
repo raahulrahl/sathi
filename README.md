@@ -96,7 +96,8 @@ sequenceDiagram
     Note over Family,Companion: 3. Agree on handoff
     Saathi->>Family: Unlock WhatsApp + Email
     Saathi->>Companion: Unlock WhatsApp + Email
-    Family<-->Companion: Coordinate details<br/>(meeting point, what parent looks like)
+    Family->>Companion: Where we'll meet, what mom looks like
+    Companion-->>Family: Confirms plan, shares landmarks
     Note over Saathi: Saathi steps back
 
     Note over Flight: 4. The flight happens
