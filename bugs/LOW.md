@@ -23,6 +23,8 @@ exists; wire it in.
 
 ## L02 — Clerk webhook hard-codes `role: 'companion'`
 
+**Status:** ✅ FIXED in [supabase/migrations/0023_onboarding_complete.sql](../supabase/migrations/0023_onboarding_complete.sql) + [app/onboarding/actions.ts](../app/onboarding/actions.ts) (2026-04-18). Added `profiles.onboarding_complete boolean not null default false` (indexed). The placeholder role='companion' from the webhook stays for users who bounce, but analytics and admin views can now filter on `onboarding_complete = true` to get the real funnel. Flips to true at the end of `saveOnboardingProfile` once display_name, role, phone, and languages are all populated. Content below preserved for history.
+
 **File:** [app/api/clerk-webhook/route.ts:113-122](../app/api/clerk-webhook/route.ts)
 
 Default on insert, overwritten in onboarding. A user who bounces off

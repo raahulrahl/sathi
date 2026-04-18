@@ -139,6 +139,10 @@ export async function saveOnboardingProfile(
       facebook_url: parsed.data.facebookUrl,
       twitter_url: parsed.data.twitterUrl,
       instagram_url: parsed.data.instagramUrl,
+      // Flip the L02 flag — at this point display_name, role,
+      // phone, and languages are all populated, so the user counts
+      // as actually onboarded for analytics / admin filters.
+      onboarding_complete: true,
     })
     .eq('id', userId);
 

@@ -31,6 +31,7 @@ export interface ProfilesRow {
   gender: string | null;
   created_at: string;
   last_notified_at: string | null;
+  onboarding_complete: boolean;
 }
 
 export interface VerificationsRow {
