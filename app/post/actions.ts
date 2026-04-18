@@ -25,6 +25,7 @@ import { after } from 'next/server';
 import { z } from 'zod';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { isValidIata } from '@/lib/iata';
+import { LANGUAGES } from '@/lib/languages';
 import { moderateText } from '@/lib/moderation';
 import { enqueueMatchNotifications } from '@/lib/notifications/enqueue';
 import { dispatchPendingNotifications } from '@/lib/notifications/dispatch';
@@ -76,7 +77,17 @@ const TripSchema = z
       )
       .optional()
       .default([]),
-    languages: z.array(z.string().min(1)).min(1),
+    // Languages the poster can help in (for offers) or wants on the
+    // companion's side (for requests). Must come from the canonical
+    // list in lib/languages.ts — free-text would let "English (US)"
+    // and "English" silently fail to match at the ranking layer (L01).
+    languages: z
+      .array(
+        z.string().refine((v) => LANGUAGES.includes(v), {
+          message: 'Unknown language.',
+        }),
+      )
+      .min(1),
     gender_preference: z.enum(['any', 'male', 'female']).default('any'),
     help_categories: z.array(z.string().min(1)).default([]),
     thank_you_eur: z.number().int().min(0).max(500).optional().nullable(),

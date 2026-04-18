@@ -7,6 +7,7 @@ import { parsePhoneNumberFromString } from 'libphonenumber-js';
 import { z } from 'zod';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { lookupPhoneNumber } from '@/lib/verify';
+import { LANGUAGES } from '@/lib/languages';
 
 /**
  * Simplified onboarding write. Single form — role, name, languages,
@@ -34,8 +35,19 @@ const OnboardingSchema = z
   .object({
     displayName: z.string().trim().min(1, 'Tell us what to call you.').max(60),
     role: z.enum(['family', 'companion']),
-    primaryLanguage: z.string().min(1),
-    languages: z.array(z.string().min(1)).min(1, 'Pick at least one language.'),
+    // Language fields accept only canonical values from lib/languages.ts —
+    // prevents "English (US)" / "english" / "Eng" silently failing to
+    // match "English" at the matching layer (bug L01).
+    primaryLanguage: z.string().refine((v) => LANGUAGES.includes(v), {
+      message: 'Pick a primary language from the list.',
+    }),
+    languages: z
+      .array(
+        z.string().refine((v) => LANGUAGES.includes(v), {
+          message: 'Unknown language.',
+        }),
+      )
+      .min(1, 'Pick at least one language.'),
     whatsappNumber: z.string().min(1, 'WhatsApp number required.'),
     bio: z.string().max(280).nullable(),
     linkedinUrl: UrlOrNull,

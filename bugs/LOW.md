@@ -8,6 +8,8 @@ like it.
 
 ## L01 — `languages` on trips has no allowlist
 
+**Status:** ✅ FIXED in [app/post/actions.ts](../app/post/actions.ts) + [app/onboarding/actions.ts](../app/onboarding/actions.ts) (2026-04-18). Both trip-post and onboarding now refine language entries against the canonical `LANGUAGES` list from [lib/languages.ts](../lib/languages.ts). Free-text variants like "English (US)" are rejected at submit; stored values are all from the curated ~35-language list. Content below preserved for history.
+
 **File:** [app/post/actions.ts:47](../app/post/actions.ts)
 
 `z.array(z.string().min(1)).min(1)` accepts `"English (US)"`,
